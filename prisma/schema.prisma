@@ -1,0 +1,134 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model tbClientes {
+  intCliente       Int        @id @default(autoincrement())
+  strNombre          String
+  strEmail           String     @unique
+  strPassword        String
+  strTelefono        String?
+  bolActivo          Boolean    @default(true)
+  datRegistro        DateTime   @default(now())
+
+  // Relaciones
+  tbPedidos          tbPedidos[]
+  tbDirecciones      tbDirecciones[]
+}
+
+model tbEmpleados {
+  intEmpleado      Int       @id @default(autoincrement())
+  strNombre          String
+  strEmail           String    @unique
+  strPassword        String
+  strRol             RolEmpleado 
+  intActivo          Int   @default(1)
+  datCreacion        DateTime  @default(now())
+  datActualizacion   DateTime  @updatedAt
+
+  // Relaciones
+  tbProductos        tbProductos[] @relation("EmpleadoProductos") // productos creados
+}
+enum RolEmpleado {
+  SUPERADMIN
+  ADMIN
+  VENDEDOR
+}
+
+
+// ======================================================
+//  CATEGORÍAS Y PRODUCTOS
+// ======================================================
+
+model tbCategorias {
+  intCategoria    Int        @id @default(autoincrement())
+  strNombre         String
+  strDescripcion    String?
+  datCreacion       DateTime   @default(now())
+  datActualizacion  DateTime   @updatedAt
+
+  tbProductos       tbProductos[]
+}
+
+model tbProductos {
+  intProducto      Int         @id @default(autoincrement())
+  strNombre          String
+  strDescripcion     String?
+  dblPrecio          Float
+  intStock           Int          @default(0)
+  strImagen          String?
+  intActivo          Boolean      @default(true)
+  datCreacion        DateTime     @default(now())
+  datActualizacion   DateTime     @updatedAt
+
+  intCategoria     Int
+  tbCategoria        tbCategorias @relation(fields: [intCategoria], references: [intCategoria])
+
+  intCreadoPorId     Int?
+  tbCreadoPor        tbEmpleados?  @relation("UsuarioProductos", fields: [intCreadoPorId], references: [intEmpleado])
+
+  tbItemsPedido      tbPedidosItems[]
+}
+
+// ======================================================
+//  PEDIDOS Y DETALLES
+// ======================================================
+
+model tbPedidos {
+  intPedido        Int           @id @default(autoincrement())
+  intCliente      Int
+  dblTotal        Float          @default(0)
+  strEstado       EstadoPedido   @default(PENDIENTE)
+  datPedido       DateTime       @default(now())
+  datActualizacion DateTime       @updatedAt
+
+  tbCliente          tbClientes     @relation(fields: [intCliente], references: [intCliente])
+  tbItems            tbPedidosItems[]
+}
+
+model tbPedidosItems {
+  intPedidoItem   Int       @id @default(autoincrement())
+  intPedido       Int
+  intProducto     Int
+  intCantidad       Int       @default(1)
+  dblSubtotal       Float     @default(0)
+
+  tbPedido          tbPedidos   @relation(fields: [intPedido], references: [intPedido])
+  tbProducto        tbProductos @relation(fields: [intProducto], references: [intProducto])
+}
+
+enum EstadoPedido {
+  PENDIENTE
+  PAGADO
+  EN_PROCESO
+  ENVIADO
+  ENTREGADO
+  CANCELADO
+}
+
+// ======================================================
+//  DIRECCIONES
+// ======================================================
+
+model tbDirecciones {
+  intDireccion  Int      @id @default(autoincrement())
+  intUsuario    Int
+  strCalle        String
+  strCiudad       String
+  strEstado       String
+  strCP           String
+  strPais         String    @default("México")
+
+  tbUsuario       tbUsuarios @relation(fields: [intUsuario], references: [intUsuario])
+}
