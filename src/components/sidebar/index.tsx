@@ -19,7 +19,12 @@ import {
   Settings,
   Layers3,
   ShoppingCart,
-  X,ChevronDown,Activity
+  X,ChevronDown,Activity,
+  Bell,
+  Outdent,
+  ArrowUpFromDot,
+  ArrowDownToDot,
+  ArrowLeftRight
 } from "lucide-react";
 import { useSession } from 'next-auth/react';
 
@@ -106,9 +111,35 @@ const routes = [
   },
   {
     name: "Inventario",
-    path: "/inventario",
     icon: <Boxes size={20} />,
-    roles: ["SuperAdmin", "admin", "usuario"],
+    roles: ["SuperAdmin"],
+    children: [
+      {
+        name: "Existencias",
+        path: "/inventario/existencias",
+        icon: <Boxes size={18} />,
+      },
+      {
+        name: "Movimientos",
+        path: "/inventario/movimientos",
+        icon: <ArrowLeftRight size={18} />,
+      },
+       {
+        name: "Entradas",
+        path: "/inventario/entradas",
+        icon: <ArrowDownToDot size={18} />,
+      },
+       {
+          name: "Salidas",
+          path: "/inventario/salidas",
+          icon: <ArrowUpFromDot size={18} />,
+        },
+        {
+          name: "Alertas",
+          path: "/inventario/alertas",
+          icon: <Bell size={18} />,
+        },
+    ],
   },
 ];
 
@@ -223,7 +254,7 @@ export default function Sidebar({
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-2">
+        <nav className="flex-1  px-4 py-6 space-y-2">
           {filteredRoutes.map(route => (
             route.children ? (
               // Menú con submenús
