@@ -35,6 +35,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es">
       <body className="min-h-screen w-full bg-gray-100">  
+        {/* <SessionProvider> */}
+
+        
         {/* Sidebar - solo si no está en rutas ocultas */}
         {!hideLayout && (
           <Sidebar
@@ -60,10 +63,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           )}
 
           {/* Main content */}
-          <main className={hideLayout ? 'min-h-screen flex justify-center items-center' : 'p-4'}>
+          <main className={hideLayout ? 'min-h-screen flex justify-center items-center' : ''}>
             {children}
           </main>
         </div>
+        {/* </SessionProvider> */}
       </body>
     </html>
   );

@@ -1,60 +1,61 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// middleware.ts
-import { NextResponse } from 'next/server';
-import { NextRequest } from 'next/server'; // Asegúrate de apuntar a tu archivo correcto
-import { getToken } from "next-auth/jwt";
+import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { verifyTokenEdge } from "./lib/verifyTokenEdge"; // 👈 usa esta versión
 
-
-
-
-const encoder = new TextEncoder();
-const secret = encoder.encode(process.env.AUTH_SECRET || 'secret');
-//Rutas base y los roles permitidos
 const accessControl: Record<string, string[]> = {
-  "/dashboard": ["SuperAdmin", "admin", "usuario"],
-  "/pedidos": ["SuperAdmin", "admin", "usuario"],
-  "/proveedores/alta-proveedor": ["SuperAdmin"],
-  "/proveedores/lista-proveedores": ["SuperAdmin"],
-  "/usuarios/alta-usuario": ["SuperAdmin"],
-  "/usuarios/lista-usuarios": ["SuperAdmin"],
-  "/productos/alta-producto": ["SuperAdmin"],
-  "/productos/lista-productos": ["SuperAdmin"],
-  "/categorias/alta-categoria": ["SuperAdmin"],
-  "/categorias/lista-categorias": ["SuperAdmin"],
-  "/inventario": ["SuperAdmin", "admin", "usuario"],
+  "/dashboard": ["SUPERADMIN", "ADMIN", "USUARIO"],
+  "/pedidos": ["SUPERADMIN", "ADMIN", "USUARIO"],
+  "/proveedores/alta-proveedor": ["SUPERADMIN"],
+  "/proveedores/lista-proveedores": ["SUPERADMIN"],
+  "/usuarios/alta-usuario": ["SUPERADMIN"],
+  "/usuarios/lista-usuarios": ["SUPERADMIN"],
+  "/productos/alta-producto": ["SUPERADMIN"],
+  "/productos/lista-productos": ["SUPERADMIN"],
+  "/categorias/alta-categoria": ["SUPERADMIN"],
+  "/categorias/lista-categorias": ["SUPERADMIN"],
+  "/inventario": ["SUPERADMIN", "ADMIN", "USUARIO"],
 };
 
-
 export async function middleware(req: NextRequest) {
-
-  console.log("🛡️ Middleware ejecutado en:", req.nextUrl.pathname);
-  const pathname = req.nextUrl.pathname;
-  let userRole: string | null = null;
-  let authType: 'credenciales' | 'google' | null = null;
-
- const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  const role = token?.role;
   const path = req.nextUrl.pathname;
+  console.log("🛡️ Middleware ejecutado en:", path);
 
+  // 1️⃣ Leer token desde cookie
+  const token = req.cookies.get("token")?.value;
+
+  if (!token) {
+    console.warn("❌ No se encontró token en cookies");
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  // 2️⃣ Verificar el token con jose
+  const decoded = await verifyTokenEdge(token);
+
+  if (!decoded) {
+    console.warn("❌ Token inválido o expirado");
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  const userRole = decoded.rol?.toUpperCase() || "USUARIO";
   const allowedRoles = accessControl[path];
-  if (allowedRoles && !allowedRoles.includes(role as string)) {
+
+  if (allowedRoles && !allowedRoles.includes(userRole)) {
+    console.warn(`🚫 Acceso denegado: ${userRole} → ${path}`);
     return NextResponse.redirect(new URL("/no-autorizado", req.url));
   }
 
-  console.log(`🟢 Acceso permitido a "${pathname}" como "${authType}"`);
+  console.log(`🟢 Acceso permitido a "${path}" como "${userRole}"`);
   return NextResponse.next();
 }
 
-// Define en qué rutas se aplica este middleware
 export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/pedidos/:path*',
-    '/proveedores/:path*',
-    '/usuarios/:path*',
-    '/productos/:path*',
-    '/categorias/:path*',
-    '/inventario/:path*',
+    "/dashboard/:path*",
+    "/pedidos/:path*",
+    "/proveedores/:path*",
+    "/usuarios/:path*",
+    "/productos/:path*",
+    "/categorias/:path*",
+    "/inventario/:path*",
   ],
 };
-

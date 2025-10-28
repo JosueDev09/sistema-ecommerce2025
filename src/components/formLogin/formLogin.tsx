@@ -1,8 +1,9 @@
 "use client"
-import { useState } from "react";
+import { useEffect, useState } from "react";
 // import { SignIn } from "../ui/signin-google/signin-google";
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
+import Cookies from "js-cookie"; // npm install js-cookie
 // import Swal from 'sweetalert2';
 
 export function FormLogin(){
@@ -19,58 +20,90 @@ export function FormLogin(){
   }
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorUsuario('');
-    setErrorContra('');
-    let hasError = false;
+  e.preventDefault();
+  setErrorUsuario('');
+  setErrorContra('');
+  let hasError = false;
 
-    if (!strUsuario.trim()) {
-      setErrorUsuario('El usuario es obligatorio');
-      hasError = true;
-    }
-  
-    if (!strContra.trim()) {
-      setErrorContra('La contraseña es obligatoria');
-      hasError = true;
-    }
-  
-    if (hasError) return;
-  
-    setIsLoading(true);
+  if (!strUsuario.trim()) {
+    setErrorUsuario('El usuario es obligatorio');
+    hasError = true;
+  }
+  if (!strContra.trim()) {
+    setErrorContra('La contraseña es obligatoria');
+    hasError = true;
+  }
+  if (hasError) return;
 
-    try {
-      const res = await fetch("/api/login", {
+  setIsLoading(true);
+
+  try {
+     const res = await fetch("/api/graphql", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ strUsuario, strContra })
+        body: JSON.stringify({
+          query: `
+            mutation Login($data: LoginInput!) {
+              login(data: $data) {
+                token
+                usuario {
+                  ... on Empleado {
+                    intEmpleado
+                    strUsuario
+                    strRol
+                  }
+                  ... on Cliente {
+                    intCliente
+                    strUsuario
+                    strEmail
+                  }
+                }
+              }
+            }
+          `,
+          variables: {
+            data: {
+              strUsuario,
+              strContra,
+            },
+          },
+        }),
       });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        setErrorContra(errorData.error || 'Error al iniciar sesión');
-        setIsLoading(false);
-        return;
-      }
-  
-      const data = await res.json();
+    const data = await res.json();
 
-      if (data.error) {
-        setErrorContra(data.error);
-        setIsLoading(false);
-        return;
-      } 
-      
-      await esperar(1500);
-      router.push("/dashboard");
-    
-    } catch (err) {
-      console.error("Error al hacer login:", err);
-      setErrorContra("Hubo un problema al iniciar sesión");
+   
+    //console.log(data.data.me);
+    if (data.errors) {
+      setErrorContra(data.errors[0].message);
       setIsLoading(false);
+      return;
     }
-  };
+
+    const result = data.data.login;
+    // localStorage.setItem("token", result.token);
+    // Guarda también en cookie (para middleware)
+    Cookies.set("token", result.token, {
+      expires: 1, // 1 día
+      secure: true,
+      sameSite: "strict",
+    });
+
+    await esperar(1000);
+    router.push("/dashboard");
+
+  } catch (err) {
+    console.error("Error al hacer login:", err);
+    setErrorContra("Hubo un problema al iniciar sesión");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
+
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-slate-100">

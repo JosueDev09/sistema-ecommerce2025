@@ -14,71 +14,73 @@ datasource db {
 }
 
 model tbClientes {
-  intCliente       Int        @id @default(autoincrement())
-  strNombre          String
-  strEmail           String     @unique
-  strPassword        String
-  strTelefono        String?
-  bolActivo          Boolean    @default(true)
-  datRegistro        DateTime   @default(now())
+  intCliente  Int      @id @default(autoincrement())
+  strNombre   String
+  strEmail    String   @unique
+  strUsuario  String   @unique
+  strContra   String
+  strTelefono String?
+  bolActivo   Boolean  @default(true)
+  datRegistro DateTime @default(now())
 
   // Relaciones
-  tbPedidos          tbPedidos[]
-  tbDirecciones      tbDirecciones[]
+  tbPedidos     tbPedidos[]
+  tbDirecciones tbDirecciones[]
 }
 
 model tbEmpleados {
-  intEmpleado      Int       @id @default(autoincrement())
-  strNombre          String
-  strEmail           String    @unique
-  strPassword        String
-  strRol             RolEmpleado 
-  intActivo          Int   @default(1)
-  datCreacion        DateTime  @default(now())
-  datActualizacion   DateTime  @updatedAt
+  intEmpleado      Int         @id @default(autoincrement())
+  strNombre        String
+  strEmail         String      @unique
+  strUsuario       String      @unique
+  strContra        String
+  strRol           RolEmpleado
+  bolActivo        Boolean     @default(true)
+  datCreacion      DateTime    @default(now())
+  datActualizacion DateTime    @updatedAt
 
   // Relaciones
-  tbProductos        tbProductos[] @relation("EmpleadoProductos") // productos creados
+  tbProductos tbProductos[] @relation("EmpleadoProductos")
 }
+
 enum RolEmpleado {
   SUPERADMIN
   ADMIN
   VENDEDOR
 }
 
-
 // ======================================================
 //  CATEGORÍAS Y PRODUCTOS
 // ======================================================
 
 model tbCategorias {
-  intCategoria    Int        @id @default(autoincrement())
-  strNombre         String
-  strDescripcion    String?
-  datCreacion       DateTime   @default(now())
-  datActualizacion  DateTime   @updatedAt
+  intCategoria     Int      @id @default(autoincrement())
+  strNombre        String
+  strDescripcion   String?
+  datCreacion      DateTime @default(now())
+  datActualizacion DateTime @updatedAt
 
-  tbProductos       tbProductos[]
+  tbProductos tbProductos[]
 }
 
 model tbProductos {
-  intProducto      Int         @id @default(autoincrement())
-  strNombre          String
-  strDescripcion     String?
-  dblPrecio          Float
-  intStock           Int          @default(0)
-  strImagen          String?
-  intActivo          Boolean      @default(true)
-  datCreacion        DateTime     @default(now())
-  datActualizacion   DateTime     @updatedAt
+  intProducto      Int      @id @default(autoincrement())
+  strNombre        String
+  strDescripcion   String?
+  dblPrecio        Float
+  intStock         Int      @default(0)
+  strImagen        String?
+  bolActivo        Boolean  @default(true)
+  datCreacion      DateTime @default(now())
+  datActualizacion DateTime @updatedAt
 
-  intCategoria     Int
-  tbCategoria        tbCategorias @relation(fields: [intCategoria], references: [intCategoria])
+  intCategoria Int
+  tbCategoria  tbCategorias @relation(fields: [intCategoria], references: [intCategoria])
 
-  intCreadoPorId     Int?
-  tbCreadoPor        tbEmpleados?  @relation("UsuarioProductos", fields: [intCreadoPorId], references: [intEmpleado])
+  intCreadoPorId Int?
+  tbCreadoPor    tbEmpleados? @relation("EmpleadoProductos", fields: [intCreadoPorId], references: [intEmpleado])
 
-  tbItemsPedido      tbPedidosItems[]
+  tbItemsPedido tbPedidosItems[]
 }
 
 // ======================================================
@@ -86,26 +88,26 @@ model tbProductos {
 // ======================================================
 
 model tbPedidos {
-  intPedido        Int           @id @default(autoincrement())
-  intCliente      Int
-  dblTotal        Float          @default(0)
-  strEstado       EstadoPedido   @default(PENDIENTE)
-  datPedido       DateTime       @default(now())
-  datActualizacion DateTime       @updatedAt
+  intPedido        Int          @id @default(autoincrement())
+  intCliente       Int
+  dblTotal         Float        @default(0)
+  strEstado        EstadoPedido @default(PENDIENTE)
+  datPedido        DateTime     @default(now())
+  datActualizacion DateTime     @updatedAt
 
-  tbCliente          tbClientes     @relation(fields: [intCliente], references: [intCliente])
-  tbItems            tbPedidosItems[]
+  tbCliente tbClientes       @relation(fields: [intCliente], references: [intCliente])
+  tbItems   tbPedidosItems[]
 }
 
 model tbPedidosItems {
-  intPedidoItem   Int       @id @default(autoincrement())
-  intPedido       Int
-  intProducto     Int
-  intCantidad       Int       @default(1)
-  dblSubtotal       Float     @default(0)
+  intPedidoItem Int   @id @default(autoincrement())
+  intPedido     Int
+  intProducto   Int
+  intCantidad   Int   @default(1)
+  dblSubtotal   Float @default(0)
 
-  tbPedido          tbPedidos   @relation(fields: [intPedido], references: [intPedido])
-  tbProducto        tbProductos @relation(fields: [intProducto], references: [intProducto])
+  tbPedido   tbPedidos   @relation(fields: [intPedido], references: [intPedido])
+  tbProducto tbProductos @relation(fields: [intProducto], references: [intProducto])
 }
 
 enum EstadoPedido {
@@ -122,13 +124,13 @@ enum EstadoPedido {
 // ======================================================
 
 model tbDirecciones {
-  intDireccion  Int      @id @default(autoincrement())
-  intUsuario    Int
-  strCalle        String
-  strCiudad       String
-  strEstado       String
-  strCP           String
-  strPais         String    @default("México")
+  intDireccion Int    @id @default(autoincrement())
+  intCliente   Int
+  strCalle     String
+  strCiudad    String
+  strEstado    String
+  strCP        String
+  strPais      String @default("México")
 
-  tbUsuario       tbUsuarios @relation(fields: [intUsuario], references: [intUsuario])
+  tbCliente tbClientes @relation(fields: [intCliente], references: [intCliente])
 }

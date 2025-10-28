@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { verifyTokenEdge } from "../../lib/verifyTokenEdge"; // 👈 usa esta versión
 import { usePathname } from 'next/navigation';
 import NavLink from './nav-link';
 import {
@@ -42,7 +43,7 @@ const routes = [
     children: [
       {
         name: "Alta proveedor",
-        path: "/proveedores/alta-proveedor",
+        path: "/proveedores/alta-proveedores",
         icon: <Plus size={18} />,
       },
       {
@@ -58,13 +59,13 @@ const routes = [
     roles: ["SuperAdmin"],
     children: [
       {
-        name: "Alta usuario",
-        path: "/usuarios/alta-usuario",
+        name: "Alta empleado",
+        path: "/administracion/empleados/alta-empleados",
         icon: <UserPlus size={18} />,
       },
       {
-        name: "Usuarios",
-        path: "/usuarios/lista-usuarios",
+        name: "Empleados",
+        path: "/administracion/empleados/lista-empleados",
         icon: <Users size={18} />,
       },
     ],
@@ -76,7 +77,7 @@ const routes = [
     children: [
       {
         name: "Alta producto",
-        path: "/productos/alta-producto",
+        path: "/productos/alta-productos",
         icon: <Plus size={18} />,
       },
       {
@@ -121,23 +122,40 @@ export default function Sidebar({
   sidebarRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const pathname = usePathname();
-  // const { data: session } = useSession();
+
   const [userRole, setUserRole] = useState<string | null>(null);
   const [openMenus, setOpenMenus] = useState<string[]>([]);
 
-  // useEffect(() => {
-  //   if (session?.user?.rol) {
-  //     setUserRole(session.user.rol.toLowerCase());
-  //   } else {
-  //     const roleMatch = document.cookie.match(/(^| )role=([^;]+)/);
-  //     const role = roleMatch?.[2];
-  //     if (role) {
-  //       setUserRole(role.toLowerCase());
-  //     } else {
-  //       console.warn("No se encontró cookie 'role'");
-  //     }
-  //   }
-  // }, [session]);
+  useEffect(() => {
+    const getUserRole = async () => {
+      try {
+        // 1️⃣ Obtener el token de cookie o localStorage
+        const token =
+          document.cookie.match(/(^| )token=([^;]+)/)?.[2] ||
+          localStorage.getItem("token");
+
+        if (!token) {
+          console.warn("⚠️ No se encontró token");
+          return;
+        }
+
+        // 2️⃣ Decodificarlo con jose
+        const decoded = await verifyTokenEdge(token);
+
+        if (decoded?.rol) {
+          console.log("Rol decodificado:", decoded.rol);
+          setUserRole(decoded.rol.toLowerCase());
+        } else {
+          console.warn("⚠️ Token inválido o sin rol");
+        }
+      } catch (error) {
+        console.error("❌ Error obteniendo rol:", error);
+      }
+    };
+
+    getUserRole();
+  }, []);
+
 
   // Auto-abrir menú si una ruta hija está activa
   useEffect(() => {
@@ -212,7 +230,7 @@ export default function Sidebar({
               <div key={route.name} className="space-y-1">
                 <button
                   onClick={() => toggleMenu(route.name)}
-                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-all group"
+                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-300  hover:text-white transition-all group"
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-slate-400 group-hover:text-blue-400 transition-colors">
@@ -239,11 +257,11 @@ export default function Sidebar({
                       <div
                         className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
                           pathname === sub.path
-                            ? 'bg-blue-500/10 text-blue-400 font-medium'
-                            : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                            ? 'text-white font-medium'
+                            : 'text-white hover:text-white'
                         }`}
                       >
-                        <span className={pathname === sub.path ? 'text-blue-400' : ''}>
+                        <span className={pathname === sub.path ? 'text-blue-100' : 'text-white'}>
                           {sub.icon}
                         </span>
                         <span>{sub.name}</span>
@@ -259,10 +277,10 @@ export default function Sidebar({
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
                     pathname === route.path
                       ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30 font-medium'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                      : 'text-white  hover:text-white'
                   }`}
                 >
-                  <span className={pathname === route.path ? 'text-white' : 'text-slate-400'}>
+                  <span className={pathname === route.path ? 'text-white' : 'text-white'}>
                     {route.icon}
                   </span>
                   <span>{route.name}</span>
