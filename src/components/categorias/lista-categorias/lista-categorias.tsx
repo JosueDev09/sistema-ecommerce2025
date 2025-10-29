@@ -2,6 +2,8 @@
 import { useState,useEffect } from "react";
 import { Search, Filter, Plus, Tag, Image, CheckCircle, XCircle, Eye, Edit, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { formatFecha } from "@/src/lib/formatFecha";
+
 
 interface Categoria {
   intCategoria: number;
@@ -233,7 +235,7 @@ export default function ListaCategorias() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {cat.datCreacion}
+                        {formatFecha(cat.datCreacion)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap flex gap-2">
                         <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">

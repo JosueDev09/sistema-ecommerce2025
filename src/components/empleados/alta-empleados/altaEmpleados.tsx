@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { User, Mail, Phone, MapPin, Calendar, Briefcase, DollarSign, Upload, X, Check } from 'lucide-react';
+import { verifyTokenEdge } from "../../../lib/verifyTokenEdge"; // 👈 usa esta versión
 
 export default function AltaEmpleados() {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nombre: '',
     apellidoPaterno: '',
@@ -28,6 +30,35 @@ export default function AltaEmpleados() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+   useEffect(() => {
+      const getUserRole = async () => {
+        try {
+          // 1️⃣ Obtener el token de cookie o localStorage
+          const token =
+            document.cookie.match(/(^| )token=([^;]+)/)?.[2] ||
+            localStorage.getItem("token");
+  
+          if (!token) {
+            console.warn("⚠️ No se encontró token");
+            return;
+          }
+  
+          // 2️⃣ Decodificarlo con jose
+          const decoded = await verifyTokenEdge(token);
+  
+          if (decoded?.rol) {
+             console.log("Rol decodificado alta:", decoded.rol);
+            setUserRole(decoded.rol.toLowerCase());
+          } else {
+            console.warn("⚠️ Token inválido o sin rol");
+          }
+        } catch (error) {
+          console.error("❌ Error obteniendo rol:", error);
+        }
+      };
+  
+      getUserRole();
+    }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -475,6 +506,8 @@ export default function AltaEmpleados() {
           </div>
 
           {/* Acceso Sistema */}
+        
+          {userRole === "superadmin" &&  (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center gap-2 mb-6">
               <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -587,6 +620,7 @@ export default function AltaEmpleados() {
               
             </div>
           </div>
+          )}
 
           {/* Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-end">

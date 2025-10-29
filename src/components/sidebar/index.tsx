@@ -153,7 +153,7 @@ export default function Sidebar({
   sidebarRef: React.RefObject<HTMLDivElement | null>;
 }) {
   const pathname = usePathname();
-
+  const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [openMenus, setOpenMenus] = useState<string[]>([]);
 
@@ -176,6 +176,7 @@ export default function Sidebar({
         if (decoded?.rol) {
           console.log("Rol decodificado:", decoded.rol);
           setUserRole(decoded.rol.toLowerCase());
+          setUser(decoded.usuario.toUpperCase());
         } else {
           console.warn("⚠️ Token inválido o sin rol");
         }
@@ -329,11 +330,11 @@ export default function Sidebar({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">
-                <span>Usuario</span>
-                {/* {session?.user?.name || 'Usuario'} */}
+                <span>{user}</span>
+               {/* {user && <span> {user}</span>} */}
               </p>
               <p className="text-xs text-slate-400 truncate capitalize">
-                {/* {userRole || 'Cargando...'} */}
+                {userRole || 'Cargando...'}
               </p>
             </div>
           </div>
