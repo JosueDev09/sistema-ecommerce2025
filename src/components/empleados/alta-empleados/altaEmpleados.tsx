@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react';
 import { User, Mail, Phone, MapPin, Calendar, Briefcase, DollarSign, Upload, X, Check } from 'lucide-react';
 import { verifyTokenEdge } from "../../../lib/verifyTokenEdge"; // 👈 usa esta versión
+import { RolEmpleado } from '@prisma/client';
+
+const rolLabels: Record<RolEmpleado, string> = {
+  SUPERADMIN: "Super Admin",
+  ADMIN: "Administrador",
+  VENDEDOR: "Vendedor",
+};
 
 export default function AltaEmpleados() {
   const [isLoading, setIsLoading] = useState(false);
@@ -602,13 +609,11 @@ export default function AltaEmpleados() {
                     }`}
                   >
                     <option value="">Seleccionar rol</option>
-                    <option value="superadmin">Superadmin</option>
-                    <option value="admin">Administrador</option>
-                    <option value="vendedor">Vendedor</option>
-                    <option value="soporte">Soporte</option>
-                    <option value="almacen">Almacén</option>
-                    <option value="finanzas">Finanzas</option>
-                    <option value="invitado">Invitado</option>
+                      {Object.values(RolEmpleado).map((rol) => (
+                        <option key={rol} value={rol}>
+                           {rolLabels[rol]}
+                        </option>
+                      ))}
                   </select>
                   {errors.rol && (
                     <p className="text-xs text-red-600 mt-1 flex items-center gap-1">

@@ -13,6 +13,12 @@ export const resolvers = {
     obtenerCategorias: async () => {
       return await db.tbCategorias.findMany();
     },
+    obtenerEmpleados: async () => {
+      return await db.tbEmpleados.findMany();
+    },
+    obtenerPedidos: async () => {
+      return await db.tbPedidos.findMany();
+    },
   },
 
   Mutation: {
