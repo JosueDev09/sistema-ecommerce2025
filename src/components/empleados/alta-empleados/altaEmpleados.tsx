@@ -20,7 +20,11 @@ export default function AltaEmpleados() {
     salario: '',
     fechaIngreso: '',
     tipoContrato: 'tiempo-completo',
-    horario: 'diurno'
+    horario: 'diurno',
+    usuario: '',
+    contra: '',
+    confirmarContra: '',
+    rol: ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -87,7 +91,11 @@ export default function AltaEmpleados() {
           salario: '',
           fechaIngreso: '',
           tipoContrato: 'tiempo-completo',
-          horario: 'diurno'
+          horario: 'diurno',
+          usuario: '',
+          contra: '',
+          confirmarContra: '',
+          rol: ''
         });
       }, 2000);
     }, 1500);
@@ -463,6 +471,120 @@ export default function AltaEmpleados() {
                   <option value="mixto">Mixto</option>
                 </select>
               </div>
+            </div>
+          </div>
+
+          {/* Acceso Sistema */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <User className="w-5 h-5 text-blue-600" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">Acceso al Sistema</h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Usuario *
+                </label>
+                <input
+                  type="text"
+                  name="usuario"
+                  value={formData.usuario}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
+                    errors.usuario ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                  }`}
+                  placeholder="Juan"
+                />
+                {errors.usuario && (
+                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    <X className="w-3 h-3" />
+                    {errors.usuario}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Contraseña *
+                </label>
+                <input
+                  type="password"
+                  name="contra"
+                  value={formData.contra}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
+                    errors.contra ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                  }`}
+                  placeholder="********"
+                />
+                {errors.contra && (
+                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    <X className="w-3 h-3" />
+                    {errors.contra}
+                  </p>
+                )}
+              </div>
+
+               {/* Confirmar Contraseña */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Confirmar Contraseña *
+                  </label>
+                  <input
+                    type="password"
+                    name="confirmarContra"
+                    value={formData.confirmarContra}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
+                      formData.confirmarContra && formData.confirmarContra !== formData.contra
+                        ? 'border-red-300 bg-red-50'
+                        : 'border-gray-200'
+                    }`}
+                    placeholder="********"
+                  />
+                  {formData.confirmarContra &&
+                    formData.confirmarContra !== formData.contra && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                        <X className="w-3 h-3" />
+                        Las contraseñas no coinciden
+                      </p>
+                    )}
+                </div>
+
+
+              {/* Rol */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Rol en el Sistema *
+                  </label>
+                  <select
+                    name="rol"
+                    value={formData.rol}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
+                      errors.rol ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                    }`}
+                  >
+                    <option value="">Seleccionar rol</option>
+                    <option value="superadmin">Superadmin</option>
+                    <option value="admin">Administrador</option>
+                    <option value="vendedor">Vendedor</option>
+                    <option value="soporte">Soporte</option>
+                    <option value="almacen">Almacén</option>
+                    <option value="finanzas">Finanzas</option>
+                    <option value="invitado">Invitado</option>
+                  </select>
+                  {errors.rol && (
+                    <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                      <X className="w-3 h-3" />
+                      {errors.rol}
+                    </p>
+                  )}
+                </div>            
+              
             </div>
           </div>
 

@@ -69,7 +69,10 @@ export const typeDefs = gql`
   type Categoria {
     intCategoria: Int!
     strNombre: String!
-    strDescripcion: String
+    strDescripcion: String!
+    strImagen: String!
+    strEstatus: String!
+    boolDestacado: Boolean!
     datCreacion: String!
     datActualizacion: String!
     tbProductos: [Producto!]
@@ -136,6 +139,10 @@ export const typeDefs = gql`
   input CategoriaInput {
     strNombre: String!
     strDescripcion: String
+    strImagen: String!
+    strEstatus: String!
+    boolDestacado: Boolean!
+    
   }
 
   input ProductoInput {

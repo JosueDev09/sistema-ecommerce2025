@@ -52,7 +52,7 @@ const routes = [
         icon: <Plus size={18} />,
       },
       {
-        name: "Proveedores",
+        name: "Lista de Proveedores",
         path: "/proveedores/lista-proveedores",
         icon: <Building2 size={18} />,
       },
@@ -69,7 +69,7 @@ const routes = [
         icon: <UserPlus size={18} />,
       },
       {
-        name: "Empleados",
+        name: "Lista de Empleados",
         path: "/administracion/empleados/lista-empleados",
         icon: <Users size={18} />,
       },
@@ -86,7 +86,7 @@ const routes = [
         icon: <Plus size={18} />,
       },
       {
-        name: "Productos",
+        name: "Lista de Productos",
         path: "/productos/lista-productos",
         icon: <Package size={18} />,
       },
@@ -99,11 +99,11 @@ const routes = [
     children: [
       {
         name: "Alta categoría",
-        path: "/categorias/alta-categoria",
+        path: "/categorias/alta-categorias",
         icon: <Plus size={18} />,
       },
       {
-        name: "Categorías",
+        name: "Lista de Categorías",
         path: "/categorias/lista-categorias",
         icon: <Layers3 size={18} />,
       },

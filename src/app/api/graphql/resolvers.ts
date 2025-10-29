@@ -16,6 +16,19 @@ export const resolvers = {
   },
 
   Mutation: {
+    crearCategoria: async (_: any, { data }: any) => {
+      console.log('Datos recibidos para crear categoría:', data);
+      const crearCategoria = await db.tbCategorias.create({
+        data: {
+          strNombre: data.strNombre,
+          strDescripcion: data.strDescripcion,
+          strImagen: data.strImagen,
+          strEstatus: data.strEstatus,
+          boolDestacado: data.boolDestacado, 
+        },
+      });
+      return crearCategoria;
+    },
     crearProducto: async (_: any, { data }: any) => {
       const nuevoProducto = await db.tbProductos.create({
         data: {
@@ -73,7 +86,7 @@ export const resolvers = {
     token,
     usuario,
   };
-},
+    },
  
   },
   UsuarioAuth: {

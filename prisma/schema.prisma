@@ -57,6 +57,9 @@ model tbCategorias {
   intCategoria     Int      @id @default(autoincrement())
   strNombre        String
   strDescripcion   String?
+  strImagen        String?
+  strEstatus       String?
+  boolDestacado    Boolean?
   datCreacion      DateTime @default(now())
   datActualizacion DateTime @updatedAt
 
