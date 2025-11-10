@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { Package, DollarSign, Tag, Image, X, Check, Upload, Plus, Trash2, Info } from 'lucide-react';
+import { useState, useEffect, use } from 'react';
+import { Package, DollarSign, Tag, Image, X, Check, Upload, Plus, Trash2, Info, Percent, Calendar } from 'lucide-react';
 
 export default function AltaProductos() {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [images, setImages] = useState<string[]>([]);
   const [variantes, setVariantes] = useState([{ nombre: '', valor: '' }]);
+  const [categorias, setCategorias] = useState<any[]>([]);
+
   
   const [formData, setFormData] = useState({
     nombre: '',
@@ -22,10 +24,73 @@ export default function AltaProductos() {
     dimensiones: '',
     estado: 'activo',
     destacado: false,
-    etiquetas: ''
+    etiquetas: '',
+    tieneDescuento: false,
+    porcentajeDescuento: '',
+    fechaInicioDescuento: '',
+    fechaFinDescuento: ''
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Calcular precio con descuento automáticamente
+  useEffect(() => {
+    
+    if (formData.tieneDescuento && formData.precio && formData.porcentajeDescuento) {
+      const precioOriginal = parseFloat(formData.precio);
+      const porcentaje = parseFloat(formData.porcentajeDescuento);
+      
+      if (!isNaN(precioOriginal) && !isNaN(porcentaje) && porcentaje > 0 && porcentaje <= 100) {
+        const descuento = precioOriginal * (porcentaje / 100);
+        const precioConDescuento = precioOriginal - descuento;
+        
+        setFormData(prev => ({
+          ...prev,
+          precioDescuento: precioConDescuento.toFixed(2)
+        }));
+      }
+    } else if (!formData.tieneDescuento) {
+      setFormData(prev => ({
+        ...prev,
+        precioDescuento: '',
+        porcentajeDescuento: '',
+        fechaInicioDescuento: '',
+        fechaFinDescuento: ''
+      }));
+    }
+  }, [formData.tieneDescuento, formData.precio, formData.porcentajeDescuento]);
+
+  useEffect(() => {
+    const fetchCategorias = async () => {
+        try {
+          const res = await fetch('/api/graphql', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              query: `
+                query {
+                  obtenerCategorias {
+                    intCategoria
+                    strNombre
+                  }
+                }
+              `,
+            }),
+          });
+          const data = await res.json();
+
+         // console.log('Categorías obtenidas:',data);
+          setCategorias(data.data.obtenerCategorias);
+        } catch (error) {
+          console.error('Error al obtener categorías:', error);
+        }
+      };
+    fetchCategorias();
+  }, []);
+
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -81,46 +146,31 @@ export default function AltaProductos() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) {
       return;
     }
 
+    try {
+      const res = await fetch('/api/productos', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ...formData, variantes, images }),
+    });
+
+      if (!res.ok) {
+        throw new Error('Error al crear el producto');
+      }
+
+    } catch(error){
+
+    }
+
     setIsLoading(true);
 
-    setTimeout(() => {
-      console.log('Producto creado:', {
-        ...formData,
-        images,
-        variantes: variantes.filter(v => v.nombre && v.valor)
-      });
-      
-      setIsLoading(false);
-      setShowSuccess(true);
-      
-      setTimeout(() => {
-        setShowSuccess(false);
-        setFormData({
-          nombre: '',
-          sku: '',
-          categoria: '',
-          marca: '',
-          descripcionCorta: '',
-          descripcionLarga: '',
-          precio: '',
-          precioDescuento: '',
-          stock: '',
-          stockMinimo: '',
-          peso: '',
-          dimensiones: '',
-          estado: 'activo',
-          destacado: false,
-          etiquetas: ''
-        });
-        setImages([]);
-        setVariantes([{ nombre: '', valor: '' }]);
-      }, 2000);
-    }, 1500);
+    
   };
 
   return (
@@ -218,34 +268,36 @@ export default function AltaProductos() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Categoría *
-                  </label>
-                  <select
-                    name="categoria"
-                    value={formData.categoria}
-                    onChange={handleChange}
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
-                      errors.categoria ? 'border-red-300 bg-red-50' : 'border-gray-200'
-                    }`}
-                  >
-                    <option value="">Seleccionar categoría</option>
-                    <option value="smartphones">Smartphones</option>
-                    <option value="laptops">Laptops</option>
-                    <option value="tablets">Tablets</option>
-                    <option value="accesorios">Accesorios</option>
-                    <option value="audio">Audio</option>
-                    <option value="wearables">Wearables</option>
-                    <option value="gaming">Gaming</option>
-                  </select>
-                  {errors.categoria && (
-                    <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                      <X className="w-3 h-3" />
-                      {errors.categoria}
-                    </p>
-                  )}
-                </div>
+               <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Categoría *
+                    </label>
+
+                    <select
+                      name="categoria"
+                      value={formData.categoria}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
+                        errors.categoria ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                      }`}
+                    >
+                      <option value="">Seleccionar categoría</option>
+
+                      {/* Aquí haces el map */}
+                      {categorias.map((cat: any) => (
+                        <option key={cat.intCategoria} value={cat.intCategoria}>
+                          {cat.strNombre}
+                        </option>
+                      ))}
+                    </select>
+
+                    {errors.categoria && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                        <X className="w-3 h-3" />
+                        {errors.categoria}
+                      </p>
+                    )}
+                  </div>
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -310,6 +362,7 @@ export default function AltaProductos() {
                         errors.precio ? 'border-red-300 bg-red-50' : 'border-gray-200'
                       }`}
                       placeholder="999.00"
+                      step="0.01"
                     />
                   </div>
                   {errors.precio && (
@@ -318,23 +371,6 @@ export default function AltaProductos() {
                       {errors.precio}
                     </p>
                   )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Precio con Descuento
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">$</span>
-                    <input
-                      type="number"
-                      name="precioDescuento"
-                      value={formData.precioDescuento}
-                      onChange={handleChange}
-                      className="w-full pl-8 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                      placeholder="899.00"
-                    />
-                  </div>
                 </div>
 
                 <div>
@@ -359,7 +395,7 @@ export default function AltaProductos() {
                   )}
                 </div>
 
-                <div>
+                <div className="md:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Stock Mínimo
                   </label>
@@ -373,6 +409,162 @@ export default function AltaProductos() {
                   />
                   <p className="text-xs text-gray-500 mt-1">Alerta cuando el stock sea menor a este valor</p>
                 </div>
+              </div>
+            </div>
+
+            {/* Descuentos */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center gap-2 mb-6">
+                <div className="w-10 h-10 bg-rose-100 rounded-lg flex items-center justify-center">
+                  <Percent className="w-5 h-5 text-rose-600" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">Descuentos y Promociones</h2>
+              </div>
+
+              <div className="space-y-5">
+                {/* Toggle de Descuento */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-rose-100 rounded-lg flex items-center justify-center">
+                      <Percent className="w-5 h-5 text-rose-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900">Producto con descuento</p>
+                      <p className="text-sm text-gray-500">Aplica un precio promocional a este producto</p>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="tieneDescuento"
+                      checked={formData.tieneDescuento}
+                      onChange={handleChange}
+                      className="sr-only peer"
+                    />
+                    <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-rose-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-rose-600"></div>
+                  </label>
+                </div>
+
+                {/* Campos de Descuento */}
+                {formData.tieneDescuento && (
+                  <div className="space-y-5 p-4 border-2 border-rose-200 rounded-lg bg-rose-50/30">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Porcentaje de Descuento *
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            name="porcentajeDescuento"
+                            value={formData.porcentajeDescuento}
+                            onChange={handleChange}
+                            min="1"
+                            max="100"
+                            className="w-full pl-4 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent outline-none transition"
+                            placeholder="10"
+                          />
+                          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">%</span>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1">Entre 1% y 100%</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Precio con Descuento
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                          <input
+                            type="number"
+                            name="precioDescuento"
+                            value={formData.precioDescuento}
+                            onChange={handleChange}
+                            className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent outline-none transition bg-gray-100"
+                            placeholder="0.00"
+                            step="0.01"
+                            readOnly
+                          />
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1">Calculado automáticamente</p>
+                      </div>
+                    </div>
+
+                    {/* Vista Previa del Ahorro */}
+                    {formData.precio && formData.porcentajeDescuento && (
+                      <div className="p-4 bg-rose-100 rounded-lg border border-rose-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-rose-700 font-medium">Vista previa del precio</p>
+                            <div className="flex items-center gap-3 mt-2">
+                              <span className="text-lg text-gray-500 line-through">${parseFloat(formData.precio).toFixed(2)}</span>
+                              <span className="text-2xl font-bold text-rose-700">${formData.precioDescuento || '0.00'}</span>
+                              <span className="px-3 py-1 bg-rose-600 text-white text-sm font-bold rounded-full">
+                                -{formData.porcentajeDescuento}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-rose-700 font-medium">Ahorro</p>
+                            <p className="text-xl font-bold text-rose-700 mt-1">
+                              ${(parseFloat(formData.precio) - parseFloat(formData.precioDescuento || '0')).toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Fechas de Vigencia */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Calendar className="w-5 h-5 text-gray-600" />
+                        <h3 className="font-semibold text-gray-900">Período de Vigencia</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Fecha de Inicio
+                          </label>
+                          <input
+                            type="datetime-local"
+                            name="fechaInicioDescuento"
+                            value={formData.fechaInicioDescuento}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent outline-none transition"
+                          />
+                          <p className="text-xs text-gray-600 mt-1">Opcional - Deja vacío para iniciar ahora</p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Fecha de Fin
+                          </label>
+                          <input
+                            type="datetime-local"
+                            name="fechaFinDescuento"
+                            value={formData.fechaFinDescuento}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent outline-none transition"
+                          />
+                          <p className="text-xs text-gray-600 mt-1">Opcional - Deja vacío para sin límite</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Alertas */}
+                    <div className="flex items-start gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <Info className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-yellow-800">
+                        <p className="font-semibold mb-1">Importante:</p>
+                        <ul className="list-disc list-inside space-y-1">
+                          <li>El precio con descuento se calcula automáticamente</li>
+                          <li>Si defines fechas, el descuento solo será visible en ese período</li>
+                          <li>El descuento se mostrará en la tienda y en los reportes</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
