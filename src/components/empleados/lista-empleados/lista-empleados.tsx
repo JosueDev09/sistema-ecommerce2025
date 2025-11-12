@@ -1,7 +1,7 @@
 "use client";
 import { use, useEffect, useState } from 'react';
 import { Search, Filter, Download, Plus, Eye, Edit, Trash2, User, Mail, Phone, Briefcase, Shield, Calendar, CheckCircle, XCircle } from 'lucide-react';
-
+import { formatFecha } from "@/src/lib/formatFecha";
 
   interface Empleado {
     intEmpleado: number;
@@ -314,7 +314,7 @@ export default function ListaEmpleados() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-600">{emp.datFechaIngreso}</span>
+                        <span className="text-sm text-gray-600">{formatFecha(emp.datFechaIngreso)}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
@@ -451,7 +451,7 @@ export default function ListaEmpleados() {
                     </div>
                     <div>
                       <p className="text-gray-500">Fecha de Ingreso</p>
-                      <p className="font-semibold text-gray-900">{selectedEmpleado.datFechaIngreso}</p>
+                      <p className="font-semibold text-gray-900">{formatFecha(selectedEmpleado.datFechaIngreso)}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Tipo de Contrato</p>
