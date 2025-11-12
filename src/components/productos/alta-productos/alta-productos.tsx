@@ -16,11 +16,11 @@ export default function AltaProductos() {
     marca: '',
     descripcionCorta: '',
     descripcionLarga: '',
-    precio: '',
-    precioDescuento: '',
-    stock: '',
-    stockMinimo: '',
-    peso: '',
+    precio: '00.00',
+    precioDescuento: '00.00',
+    stock: '0',
+    stockMinimo: '0',
+    peso: '0.00',
     dimensiones: '',
     estado: 'activo',
     destacado: false,
@@ -32,6 +32,61 @@ export default function AltaProductos() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Generar SKU automáticamente
+  useEffect(() => {
+    const generarSKU = () => {
+      if (!formData.nombre && !formData.marca) {
+        return '';
+      }
+
+      // Función para limpiar y obtener iniciales
+      const obtenerIniciales = (texto: string, maxLength: number = 3) => {
+        if (!texto) return '';
+        
+        // Limpiar caracteres especiales y espacios extra
+        const textoLimpio = texto
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "") // Eliminar acentos
+          .toUpperCase()
+          .replace(/[^A-Z0-9\s]/g, '') // Solo letras, números y espacios
+          .trim();
+        
+        // Si tiene espacios, tomar las primeras letras de cada palabra
+        const palabras = textoLimpio.split(/\s+/);
+        if (palabras.length > 1) {
+          return palabras
+            .map(p => p.charAt(0))
+            .join('')
+            .substring(0, maxLength);
+        }
+        
+        // Si es una sola palabra, tomar las primeras letras
+        return textoLimpio.substring(0, maxLength);
+      };
+
+      const marcaCode = obtenerIniciales(formData.marca, 3);
+      const nombreCode = obtenerIniciales(formData.nombre, 4);
+      
+      // Generar código aleatorio de 3 dígitos
+      const randomCode = Math.floor(100 + Math.random() * 900);
+      
+      // Combinar: MARCA-NOMBRE-RANDOM
+      const sku = [marcaCode, nombreCode, randomCode]
+        .filter(Boolean) // Eliminar valores vacíos
+        .join('-');
+      
+      return sku;
+    };
+
+    const nuevoSKU = generarSKU();
+    if (nuevoSKU && nuevoSKU !== formData.sku) {
+      setFormData(prev => ({
+        ...prev,
+        sku: nuevoSKU
+      }));
+    }
+  }, [formData.nombre, formData.marca]);
 
   // Calcular precio con descuento automáticamente
   useEffect(() => {
@@ -136,7 +191,8 @@ export default function AltaProductos() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.nombre.trim()) newErrors.nombre = 'El nombre es obligatorio';
-    if (!formData.sku.trim()) newErrors.sku = 'El SKU es obligatorio';
+    if (!formData.marca.trim()) newErrors.marca = 'La marca es obligatoria para generar el SKU';
+    if (!formData.sku.trim()) newErrors.sku = 'El SKU no se ha generado. Verifica nombre y marca.';
     if (!formData.categoria) newErrors.categoria = 'La categoría es obligatoria';
     if (!formData.precio.trim()) newErrors.precio = 'El precio es obligatorio';
     if (!formData.stock.trim()) newErrors.stock = 'El stock es obligatorio';
@@ -151,26 +207,118 @@ export default function AltaProductos() {
       return;
     }
 
+    setIsLoading(true);
+
     try {
-      const res = await fetch('/api/productos', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ ...formData, variantes, images }),
-    });
+      // Preparar los datos para GraphQL
+      const productData = {
+        strNombre: formData.nombre,
+        strSKU: formData.sku,
+        strMarca: formData.marca,
+        strDescripcion: formData.descripcionCorta,
+        strDescripcionLarga: formData.descripcionLarga,
+        dblPrecio: parseFloat(formData.precio),
+        intStock: parseInt(formData.stock, 10),
+        intStockMinimo: parseInt(formData.stockMinimo, 10) || null,
+        strImagen: images.length > 0 ? images[0] : null, // Primera imagen como principal
+        bolActivo: formData.estado === 'activo',
+        bolDestacado: formData.destacado,
+        strEstado: formData.estado,
+        
+        // Campos de descuento
+        bolTieneDescuento: formData.tieneDescuento,
+        dblPrecioDescuento: parseFloat(formData.precioDescuento) || null,
+        intPorcentajeDescuento: parseInt(formData.porcentajeDescuento, 10) || null,
+        datInicioDescuento: formData.fechaInicioDescuento || null,
+        datFinDescuento: formData.fechaFinDescuento || null,
+        
+        // Campos adicionales
+        strPeso: formData.peso || null,
+        strDimensiones: formData.dimensiones || null,
+        strEtiquetas: formData.etiquetas || null,
+        jsonVariantes: variantes.length > 0 && variantes[0].nombre ? JSON.stringify(variantes) : null,
+        jsonImagenes: images.length > 0 ? JSON.stringify(images) : null,
+        
+        // Categoría
+        intCategoria: parseInt(formData.categoria, 10),
+      };
+
+      console.log('Datos a enviar:', productData);
+
+      const res = await fetch('/api/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: `
+            mutation CrearProducto($data: ProductoInput!) {
+              crearProducto(data: $data) {
+                intProducto
+                strNombre
+                strSKU
+                dblPrecio
+                intStock
+                tbCategoria {
+                  strNombre
+                }
+              }
+            }
+          `,
+          variables: {
+            data: productData
+          }
+        }),
+      });
+
+      const result = await res.json();
+      console.log('Respuesta del servidor:', result);
+      
+      if (result.errors) {
+        throw new Error(result.errors[0]?.message || 'Error al crear el producto');
+      }
 
       if (!res.ok) {
         throw new Error('Error al crear el producto');
       }
 
-    } catch(error){
+      // Mostrar mensaje de éxito
+      setShowSuccess(true);
+      
+      // Limpiar formulario después de 2 segundos
+      setTimeout(() => {
+        setFormData({
+          nombre: '',
+          sku: '',
+          categoria: '',
+          marca: '',
+          descripcionCorta: '',
+          descripcionLarga: '',
+          precio: '',
+          precioDescuento: '',
+          stock: '',
+          stockMinimo: '',
+          peso: '',
+          dimensiones: '',
+          estado: 'activo',
+          destacado: false,
+          etiquetas: '',
+          tieneDescuento: false,
+          porcentajeDescuento: '',
+          fechaInicioDescuento: '',
+          fechaFinDescuento: ''
+        });
+        setImages([]);
+        setVariantes([{ nombre: '', valor: '' }]);
+        setShowSuccess(false);
+      }, 3000);
 
+    } catch(error) {
+      console.error('Error al crear producto:', error);
+      alert('Error al crear el producto: ' + (error as Error).message);
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(true);
-
-    
   };
 
   return (
@@ -233,38 +381,70 @@ export default function AltaProductos() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      SKU *
-                    </label>
-                    <input
-                      type="text"
-                      name="sku"
-                      value={formData.sku}
-                      onChange={handleChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
-                        errors.sku ? 'border-red-300 bg-red-50' : 'border-gray-200'
-                      }`}
-                      placeholder="IPH-14PM-128"
-                    />
-                    {errors.sku && (
-                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                        <X className="w-3 h-3" />
-                        {errors.sku}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Marca
+                      Marca *
                     </label>
                     <input
                       type="text"
                       name="marca"
                       value={formData.marca}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
+                        errors.marca ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                      }`}
                       placeholder="Apple"
                     />
+                    {errors.marca && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                        <X className="w-3 h-3" />
+                        {errors.marca}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center justify-between">
+                      <span>SKU (Código Único) *</span>
+                      <span className="text-xs font-normal text-blue-600 bg-blue-50 px-2 py-1 rounded-full flex items-center gap-1">
+                        <Check className="w-3 h-3" />
+                        Auto-generado
+                      </span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        name="sku"
+                        value={formData.sku || 'Esperando datos...'}
+                        disabled
+                        className={`w-full px-4 py-3 border rounded-lg font-mono font-semibold cursor-not-allowed transition ${
+                          formData.sku 
+                            ? 'bg-blue-50 border-blue-200 text-blue-900' 
+                            : 'bg-gray-50 border-gray-200 text-gray-400'
+                        }`}
+                        placeholder="Ingresa nombre y marca"
+                      />
+                      {formData.sku && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        </div>
+                      )}
+                    </div>
+                    {formData.sku ? (
+                      <p className="text-xs text-green-600 mt-1 flex items-center gap-1 font-medium">
+                        <Check className="w-3 h-3" />
+                        SKU generado exitosamente
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                        <Info className="w-3 h-3" />
+                        Completa el nombre y marca para generar el SKU
+                      </p>
+                    )}
+                    {errors.sku && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                        <X className="w-3 h-3" />
+                        {errors.sku}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -354,7 +534,7 @@ export default function AltaProductos() {
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                     <input
-                      type="number"
+                      type="text"
                       name="precio"
                       value={formData.precio}
                       onChange={handleChange}

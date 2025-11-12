@@ -7,7 +7,10 @@ export const resolvers = {
   Query: {
     obtenerProductos: async () => {
       return await db.tbProductos.findMany({
-        include: { tbCategoria: true },
+        include: { 
+          tbCategoria: true,
+          tbCreadoPor: true
+        },
       });
     },
     obtenerCategorias: async () => {
@@ -36,23 +39,91 @@ export const resolvers = {
       return crearCategoria;
     },
     crearProducto: async (_: any, { data }: any) => {
+      console.log('Datos recibidos para crear producto:', data);
+      
+      // Preparar los datos para la creación
+      const productData: any = {
+        strNombre: data.strNombre,
+        strSKU: data.strSKU || null,
+        strMarca: data.strMarca || null,
+        strDescripcion: data.strDescripcion || null,
+        strDescripcionLarga: data.strDescripcionLarga || null,
+        dblPrecio: parseFloat(data.dblPrecio),
+        intStock: parseInt(data.intStock),
+        intStockMinimo: data.intStockMinimo ? parseInt(data.intStockMinimo) : null,
+        strImagen: data.strImagen || null,
+        bolActivo: data.bolActivo !== undefined ? data.bolActivo : true,
+        bolDestacado: data.bolDestacado || false,
+        strEstado: data.strEstado || 'activo',
+        
+        // Campos de descuento
+        bolTieneDescuento: data.bolTieneDescuento || false,
+        dblPrecioDescuento: data.dblPrecioDescuento ? parseFloat(data.dblPrecioDescuento) : null,
+        intPorcentajeDescuento: data.intPorcentajeDescuento ? parseInt(data.intPorcentajeDescuento) : null,
+        datInicioDescuento: data.datInicioDescuento ? new Date(data.datInicioDescuento) : null,
+        datFinDescuento: data.datFinDescuento ? new Date(data.datFinDescuento) : null,
+        
+        // Campos adicionales
+        strPeso: data.strPeso || null,
+        strDimensiones: data.strDimensiones || null,
+        strEtiquetas: data.strEtiquetas || null,
+        jsonVariantes: data.jsonVariantes || null,
+        jsonImagenes: data.jsonImagenes || null,
+        
+        // Relaciones
+        intCategoria: parseInt(data.intCategoria),
+      };
+      
+      // Agregar empleado creador si existe
+      // if (data.intCreadoPorId) {
+      //   productData.intCreadoPorId = parseInt(data.intCreadoPorId);
+      // }
+      
       const nuevoProducto = await db.tbProductos.create({
-        data: {
-          strNombre: data.strNombre,
-          strDescripcion: data.strDescripcion,
-          dblPrecio: data.dblPrecio,
-          intStock: data.intStock,
-          strImagen: data.strImagen,
-          intCategoria: data.intCategoria,
+        data: productData,
+        include: { 
+          tbCategoria: true,
+          tbCreadoPor: true
         },
-        include: { tbCategoria: true },
       });
+      
+      console.log('Producto creado exitosamente:', nuevoProducto);
       return nuevoProducto;
     },
 
     eliminarProducto: async (_: any, { intProducto }: any) => {
       await db.tbProductos.delete({ where: { intProducto } });
       return true;
+    },
+    crearEmpleado: async (_: any, { data }: any) => {
+      console.log('Datos recibidos para crear empleado:', data);
+      
+      const empleadoData: any = {
+        strNombre: data.strNombre,
+        datFechaNacimiento: data.datFechaNacimiento ? new Date(data.datFechaNacimiento) : null,
+        strEmail: data.strEmail,
+        strTelefono: data.strTelefono || null,
+        strDireccion: data.strDireccion || null,
+        strCiudad: data.strCiudad || null,
+        strEstado: data.strEstado || null,
+        intCP: data.intCP ? parseInt(data.intCP) : null,
+        strPuesto: data.strPuesto,
+        strDepartamento: data.strDepartamento,
+        dblSalario: parseFloat(data.dblSalario),
+        datFechaIngreso: new Date(data.datFechaIngreso),
+        strTipoContrato: data.strTipoContrato,
+        strHorario: data.strHorario,
+        strUsuario: data.strUsuario,
+        strContra: data.strContra, // TODO: Hashear la contraseña
+        strRol: data.strRol,
+      };
+      
+      const nuevoEmpleado = await db.tbEmpleados.create({
+        data: empleadoData,
+      });
+      
+      console.log('Empleado creado exitosamente:', nuevoEmpleado);
+      return nuevoEmpleado;
     },
 
    login: async (_: any, { data }: any) => {

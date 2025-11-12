@@ -57,8 +57,20 @@ export const typeDefs = gql`
   type Empleado {
     intEmpleado: Int!
     strNombre: String!
-    strUsuario: String! 
+    datFechaNacimiento: String
     strEmail: String!
+    strTelefono: String
+    strDireccion: String
+    strCiudad: String
+    strEstado: String
+    intCP: Int
+    strPuesto: String!
+    strDepartamento: String!
+    dblSalario: Float!
+    datFechaIngreso: String!
+    strTipoContrato: String!
+    strHorario: String!
+    strUsuario: String! 
     strRol: RolEmpleado!
     bolActivo: Boolean!
     datCreacion: String!
@@ -81,11 +93,32 @@ export const typeDefs = gql`
   type Producto {
     intProducto: Int!
     strNombre: String!
+    strSKU: String
+    strMarca: String
     strDescripcion: String
+    strDescripcionLarga: String
     dblPrecio: Float!
     intStock: Int!
+    intStockMinimo: Int
     strImagen: String
     bolActivo: Boolean!
+    bolDestacado: Boolean!
+    strEstado: String!
+    
+    # Campos de descuento
+    bolTieneDescuento: Boolean!
+    dblPrecioDescuento: Float
+    intPorcentajeDescuento: Int
+    datInicioDescuento: String
+    datFinDescuento: String
+    
+    # Campos adicionales
+    strPeso: String
+    strDimensiones: String
+    strEtiquetas: String
+    jsonVariantes: String
+    jsonImagenes: String
+    
     datCreacion: String!
     datActualizacion: String!
     tbCategoria: Categoria!
@@ -131,8 +164,21 @@ export const typeDefs = gql`
 
   input EmpleadoInput {
     strNombre: String!
+    datFechaNacimiento: String
     strEmail: String!
-    strPassword: String!
+    strTelefono: String
+    strDireccion: String
+    strCiudad: String
+    strEstado: String
+    intCP: Int
+    strPuesto: String!
+    strDepartamento: String!
+    dblSalario: Float!
+    datFechaIngreso: String!
+    strTipoContrato: String!
+    strHorario: String!
+    strUsuario: String!
+    strContra: String!
     strRol: RolEmpleado!
   }
 
@@ -147,10 +193,32 @@ export const typeDefs = gql`
 
   input ProductoInput {
     strNombre: String!
+    strSKU: String
+    strMarca: String
     strDescripcion: String
+    strDescripcionLarga: String
     dblPrecio: Float!
     intStock: Int!
+    intStockMinimo: Int
     strImagen: String
+    bolActivo: Boolean
+    bolDestacado: Boolean
+    strEstado: String
+    
+    # Campos de descuento
+    bolTieneDescuento: Boolean
+    dblPrecioDescuento: Float
+    intPorcentajeDescuento: Int
+    datInicioDescuento: String
+    datFinDescuento: String
+    
+    # Campos adicionales
+    strPeso: String
+    strDimensiones: String
+    strEtiquetas: String
+    jsonVariantes: String
+    jsonImagenes: String
+    
     intCategoria: Int!
     intCreadoPorId: Int
   }

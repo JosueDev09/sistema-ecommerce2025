@@ -1,172 +1,83 @@
-
-'use client';
-import { use, useState } from 'react';
+"use client";
+import { use, useEffect, useState } from 'react';
 import { Search, Filter, Download, Plus, Eye, Edit, Trash2, User, Mail, Phone, Briefcase, Shield, Calendar, CheckCircle, XCircle } from 'lucide-react';
 
+
+  interface Empleado {
+    intEmpleado: number;
+    strNombre: string;
+    datFechaNacimiento: string;
+    strEmail: string;
+    strTelefono: string;
+    strDireccion: string;
+    strCiudad: string;
+    strEstado: string;
+    intCP: number;
+    strPuesto: string;
+    strDepartamento: string;
+    dblSalario: number;
+    datFechaIngreso: string;
+    strTipoContrato: string;
+    strHorario: string;
+    strUsuario: string ;
+    strRol: string;
+    bolActivo: boolean;
+    datCreacion: string;
+    datActualizacion: string;
+  };
 export default function ListaEmpleados() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDepartamento, setFilterDepartamento] = useState('todos');
   const [filterEstado, setFilterEstado] = useState('todos');
   const [showModal, setShowModal] = useState(false);
-  
-  type Empleado = {
-    id: string;
-    nombre: string;
-    email: string;
-    telefono: string;
-    puesto: string;
-    departamento: string;
-    salario: number;
-    fechaIngreso: string;
-    estado: string;
-    usuario: string;
-    rol: string;
-    direccion: string;
-    tipoContrato: string;
-    horario: string;
-    permisos: string[];
-  };
-
   const [selectedEmpleado, setSelectedEmpleado] = useState<Empleado | null>(null);
+  const [empleados, setEmpleados] = useState<Empleado[]>([]);
 
-  const empleados: Empleado[] = [
-    {
-      id: 'EMP-001',
-      nombre: 'Juan Pérez García',
-      email: 'juan.perez@empresa.com',
-      telefono: '461-123-4567',
-      puesto: 'Gerente de Ventas',
-      departamento: 'ventas',
-      salario: 25000,
-      fechaIngreso: '2023-01-15',
-      estado: 'activo',
-      usuario: 'juan.perez',
-      rol: 'gerente',
-      direccion: 'Av. Principal 123, Celaya, GTO',
-      tipoContrato: 'tiempo-completo',
-      horario: 'diurno',
-      permisos: ['productos', 'pedidos', 'clientes', 'reportes']
-    },
-    {
-      id: 'EMP-002',
-      nombre: 'Ana García López',
-      email: 'ana.garcia@empresa.com',
-      telefono: '461-234-5678',
-      puesto: 'Vendedora',
-      departamento: 'ventas',
-      salario: 15000,
-      fechaIngreso: '2023-03-20',
-      estado: 'activo',
-      usuario: 'ana.garcia',
-      rol: 'vendedor',
-      direccion: 'Calle Juárez 456, Celaya, GTO',
-      tipoContrato: 'tiempo-completo',
-      horario: 'diurno',
-      permisos: ['productos', 'pedidos', 'clientes']
-    },
-    {
-      id: 'EMP-003',
-      nombre: 'Carlos López Martínez',
-      email: 'carlos.lopez@empresa.com',
-      telefono: '461-345-6789',
-      puesto: 'Almacenista',
-      departamento: 'operaciones',
-      salario: 12000,
-      fechaIngreso: '2023-05-10',
-      estado: 'activo',
-      usuario: 'carlos.lopez',
-      rol: 'almacenista',
-      direccion: 'Col. Centro 789, Celaya, GTO',
-      tipoContrato: 'tiempo-completo',
-      horario: 'diurno',
-      permisos: ['inventario', 'productos']
-    },
-    {
-      id: 'EMP-004',
-      nombre: 'María Rodríguez Sánchez',
-      email: 'maria.rodriguez@empresa.com',
-      telefono: '461-456-7890',
-      puesto: 'Contadora',
-      departamento: 'finanzas',
-      salario: 22000,
-      fechaIngreso: '2023-02-01',
-      estado: 'activo',
-      usuario: 'maria.rodriguez',
-      rol: 'contador',
-      direccion: 'Fracc. Las Américas 321, Celaya, GTO',
-      tipoContrato: 'tiempo-completo',
-      horario: 'diurno',
-      permisos: ['reportes', 'pedidos']
-    },
-    {
-      id: 'EMP-005',
-      nombre: 'Laura Sánchez Pérez',
-      email: 'laura.sanchez@empresa.com',
-      telefono: '461-567-8901',
-      puesto: 'Gerente de Marketing',
-      departamento: 'marketing',
-      salario: 28000,
-      fechaIngreso: '2022-11-15',
-      estado: 'activo',
-      usuario: 'laura.sanchez',
-      rol: 'gerente',
-      direccion: 'Col. Jardines 654, Celaya, GTO',
-      tipoContrato: 'tiempo-completo',
-      horario: 'diurno',
-      permisos: ['productos', 'clientes', 'reportes']
-    },
-    {
-      id: 'EMP-006',
-      nombre: 'Pedro Hernández Torres',
-      email: 'pedro.hernandez@empresa.com',
-      telefono: '461-678-9012',
-      puesto: 'Desarrollador',
-      departamento: 'desarrollo',
-      salario: 20000,
-      fechaIngreso: '2024-01-08',
-      estado: 'activo',
-      usuario: 'pedro.hernandez',
-      rol: 'empleado',
-      direccion: 'Zona Industrial 987, Celaya, GTO',
-      tipoContrato: 'tiempo-completo',
-      horario: 'diurno',
-      permisos: ['productos']
-    },
-    {
-      id: 'EMP-007',
-      nombre: 'Sofia Ramírez Cruz',
-      email: 'sofia.ramirez@empresa.com',
-      telefono: '461-789-0123',
-      puesto: 'Recepcionista',
-      departamento: 'recursos-humanos',
-      salario: 10000,
-      fechaIngreso: '2024-06-01',
-      estado: 'inactivo',
-      usuario: 'sofia.ramirez',
-      rol: 'empleado',
-      direccion: 'Col. San Juan 147, Celaya, GTO',
-      tipoContrato: 'medio-tiempo',
-      horario: 'diurno',
-      permisos: ['clientes']
-    },
-    {
-      id: 'EMP-008',
-      nombre: 'Roberto Díaz Morales',
-      email: 'roberto.diaz@empresa.com',
-      telefono: '461-890-1234',
-      puesto: 'Administrador de Sistemas',
-      departamento: 'desarrollo',
-      salario: 30000,
-      fechaIngreso: '2022-08-20',
-      estado: 'activo',
-      usuario: 'roberto.diaz',
-      rol: 'administrador',
-      direccion: 'Av. Tecnológico 258, Celaya, GTO',
-      tipoContrato: 'tiempo-completo',
-      horario: 'diurno',
-      permisos: ['productos', 'pedidos', 'clientes', 'reportes', 'inventario', 'proveedores']
-    }
-  ];
+  useEffect(() => {
+    const fetchEmpleados = async () => {
+      const response = await fetch("/api/graphql", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `
+            query {
+              obtenerEmpleados {
+              intEmpleado
+              strNombre
+              datFechaNacimiento
+              strEmail
+              strTelefono
+              strDireccion
+              strCiudad
+              strEstado
+              intCP
+              strPuesto
+              strDepartamento
+              dblSalario
+              datFechaIngreso
+              strTipoContrato
+              strHorario
+              strUsuario
+              strRol
+              bolActivo
+              datCreacion
+              datActualizacion
+   
+              }
+            }
+          `
+        }),
+      });
+         
+      const {data} = await response.json();
+      console.log('Datos',data.obtenerEmpleados);
+      setEmpleados(data.obtenerEmpleados);
+    };
+
+    fetchEmpleados();
+  }, []);
+
+ 
 
   const getDepartamentoLabel = (dept: string) => {
     const labels: { [key: string]: string } = {
@@ -193,22 +104,22 @@ export default function ListaEmpleados() {
   };
 
   const filteredEmpleados = empleados.filter(emp => {
-    const matchesSearch = emp.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         emp.puesto.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         emp.id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDepartamento = filterDepartamento === 'todos' || emp.departamento === filterDepartamento;
-    const matchesEstado = filterEstado === 'todos' || emp.estado === filterEstado;
+    const matchesSearch = emp.strNombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         emp.strEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         emp.strPuesto.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         emp.intEmpleado.toString().includes(searchTerm.toLowerCase());
+    const matchesDepartamento = filterDepartamento === 'todos' || emp.strDepartamento === filterDepartamento;
+    const matchesEstado = filterEstado === 'todos' || emp.strEstado === filterEstado;
         
     return matchesSearch && matchesDepartamento && matchesEstado;
   });
 
   const stats = {
     total: empleados.length,
-    activos: empleados.filter(e => e.estado === 'activo').length,
-    inactivos: empleados.filter(e => e.estado === 'inactivo').length,
+    activos: empleados.filter(e => e.strEstado === 'activo').length,
+    inactivos: empleados.filter(e => e.strEstado === 'inactivo').length,
     nuevos: empleados.filter(e => {
-      const ingreso = new Date(e.fechaIngreso);
+      const ingreso = new Date(e.datFechaIngreso);
       const hoy = new Date();
       const diffMeses = (hoy.getFullYear() - ingreso.getFullYear()) * 12 + (hoy.getMonth() - ingreso.getMonth());
       return diffMeses <= 3;
@@ -363,18 +274,18 @@ export default function ListaEmpleados() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredEmpleados.map((emp) => {
-                  const rolBadge = getRolBadge(emp.rol);
+                  const rolBadge = getRolBadge(emp.strRol);
                                     
                   return (
-                    <tr key={emp.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={emp.intEmpleado} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                            {emp.nombre.split(' ')[0][0]}{emp.nombre.split(' ')[1] ? emp.nombre.split(' ')[1][0] : ''}
+                            {emp.strNombre.split(' ')[0][0]}{emp.strNombre.split(' ')[1] ? emp.strNombre.split(' ')[1][0] : ''}
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-gray-900">{emp.nombre}</p>
-                            <p className="text-xs text-gray-500">{emp.id}</p>
+                            <p className="text-sm font-semibold text-gray-900">{emp.strNombre}</p>
+                            <p className="text-xs text-gray-500">{emp.intEmpleado}</p>
                           </div>
                         </div>
                       </td>
@@ -382,37 +293,37 @@ export default function ListaEmpleados() {
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 text-sm text-gray-700">
                             <Mail className="w-4 h-4 text-gray-400" />
-                            {emp.email}
+                            {emp.strEmail}
                           </div>
                           <div className="flex items-center gap-2 text-sm text-gray-600">
                             <Phone className="w-4 h-4 text-gray-400" />
-                            {emp.telefono}
+                            {emp.strTelefono}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div>
-                          <p className="text-sm font-semibold text-gray-900">{emp.puesto}</p>
-                          <p className="text-xs text-gray-500">{getDepartamentoLabel(emp.departamento)}</p>
+                          <p className="text-sm font-semibold text-gray-900">{emp.strPuesto}</p>
+                          <p className="text-xs text-gray-500">{getDepartamentoLabel(emp.strDepartamento)}</p>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${rolBadge.bg} ${rolBadge.color}`}>
                           <Shield className="w-3.5 h-3.5" />
-                          {emp.rol.charAt(0).toUpperCase() + emp.rol.slice(1)}
+                          {emp.strRol.charAt(0).toUpperCase() + emp.strRol.slice(1)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-600">{emp.fechaIngreso}</span>
+                        <span className="text-sm text-gray-600">{emp.datFechaIngreso}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
-                          emp.estado === 'activo'
+                          emp.bolActivo
                             ? 'bg-emerald-100 text-emerald-700'
                             : 'bg-red-100 text-red-700'
                         }`}>
-                          {emp.estado === 'activo' ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
-                          {emp.estado === 'activo' ? 'Activo' : 'Inactivo'}
+                          {emp.bolActivo ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                          {emp.bolActivo ? 'Activo' : 'Inactivo'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -461,11 +372,11 @@ export default function ListaEmpleados() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                      {selectedEmpleado.nombre.split(' ')[0][0]}{selectedEmpleado.nombre.split(' ')[1] ? selectedEmpleado.nombre.split(' ')[1][0] : ''}
+                      {selectedEmpleado.strNombre.split(' ')[0][0]}{selectedEmpleado.strNombre.split(' ')[1] ? selectedEmpleado.strNombre.split(' ')[1][0] : ''}
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-900">{selectedEmpleado.nombre}</h2>
-                      <p className="text-gray-500 mt-1">{selectedEmpleado.id}</p>
+                      <h2 className="text-2xl font-bold text-gray-900">{selectedEmpleado.strNombre}</h2>
+                      <p className="text-gray-500 mt-1">{selectedEmpleado.intEmpleado}</p>
                     </div>
                   </div>
                   <button
@@ -480,20 +391,20 @@ export default function ListaEmpleados() {
               <div className="p-6 space-y-6">
                 <div className="flex flex-wrap gap-3">
                   <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold ${
-                    selectedEmpleado.estado === 'activo'
+                    selectedEmpleado.bolActivo
                       ? 'bg-emerald-100 text-emerald-700'
                       : 'bg-red-100 text-red-700'
                   }`}>
-                    {selectedEmpleado.estado === 'activo' ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
-                    {selectedEmpleado.estado === 'activo' ? 'Activo' : 'Inactivo'}
+                    {selectedEmpleado.bolActivo ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                    {selectedEmpleado.bolActivo ? 'Activo' : 'Inactivo'}
                   </span>
                                     
                   {(() => {
-                    const badge = getRolBadge(selectedEmpleado.rol);
+                    const badge = getRolBadge(selectedEmpleado.strRol);
                     return (
                       <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold ${badge.bg} ${badge.color}`}>
                         <Shield className="w-5 h-5" />
-                        {selectedEmpleado.rol.charAt(0).toUpperCase() + selectedEmpleado.rol.slice(1)}
+                        {selectedEmpleado.strRol.charAt(0).toUpperCase() + selectedEmpleado.strRol.slice(1)}
                       </span>
                     );
                   })()}
@@ -507,15 +418,15 @@ export default function ListaEmpleados() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-gray-500">Email</p>
-                      <p className="font-semibold text-gray-900">{selectedEmpleado.email}</p>
+                      <p className="font-semibold text-gray-900">{selectedEmpleado.strEmail}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Teléfono</p>
-                      <p className="font-semibold text-gray-900">{selectedEmpleado.telefono}</p>
+                      <p className="font-semibold text-gray-900">{selectedEmpleado.strTelefono}</p>
                     </div>
                     <div className="md:col-span-2">
                       <p className="text-gray-500">Dirección</p>
-                      <p className="font-semibold text-gray-900">{selectedEmpleado.direccion}</p>
+                      <p className="font-semibold text-gray-900">{selectedEmpleado.strDireccion}</p>
                     </div>
                   </div>
                 </div>
@@ -528,27 +439,27 @@ export default function ListaEmpleados() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-gray-500">Puesto</p>
-                      <p className="font-semibold text-gray-900">{selectedEmpleado.puesto}</p>
+                      <p className="font-semibold text-gray-900">{selectedEmpleado.strPuesto}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Departamento</p>
-                      <p className="font-semibold text-gray-900">{getDepartamentoLabel(selectedEmpleado.departamento)}</p>
+                      <p className="font-semibold text-gray-900">{getDepartamentoLabel(selectedEmpleado.strDepartamento)}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Salario Mensual</p>
-                      <p className="font-semibold text-gray-900">${selectedEmpleado.salario.toLocaleString()}</p>
+                      <p className="font-semibold text-gray-900">${selectedEmpleado.dblSalario.toLocaleString()}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Fecha de Ingreso</p>
-                      <p className="font-semibold text-gray-900">{selectedEmpleado.fechaIngreso}</p>
+                      <p className="font-semibold text-gray-900">{selectedEmpleado.datFechaIngreso}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Tipo de Contrato</p>
-                      <p className="font-semibold text-gray-900">{selectedEmpleado.tipoContrato.replace('-', ' ')}</p>
+                      <p className="font-semibold text-gray-900">{selectedEmpleado.strTipoContrato.replace('-', ' ')}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Horario</p>
-                      <p className="font-semibold text-gray-900">{selectedEmpleado.horario}</p>
+                      <p className="font-semibold text-gray-900">{selectedEmpleado.strHorario}</p>
                     </div>
                   </div>
                 </div>
@@ -561,16 +472,16 @@ export default function ListaEmpleados() {
                   <div className="space-y-4 text-sm">
                     <div>
                       <p className="text-gray-500">Usuario</p>
-                      <p className="font-semibold text-gray-900">{selectedEmpleado.usuario}</p>
+                      <p className="font-semibold text-gray-900">{selectedEmpleado.strUsuario}</p>
                     </div>
                     <div>
                       <p className="text-gray-500 mb-2">Permisos</p>
                       <div className="flex flex-wrap gap-2">
-                        {selectedEmpleado.permisos.map((permiso) => (
+                        {/* {selectedEmpleado.permisos.map((permiso) => (
                           <span key={permiso} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
                             {permiso.charAt(0).toUpperCase() + permiso.slice(1)}
                           </span>
-                        ))}
+                        ))} */}
                       </div>
                     </div>
                   </div>

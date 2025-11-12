@@ -201,8 +201,8 @@ export default function ListaCategorias() {
                     <tr key={cat.intCategoria} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <img
-                          src={cat.strImagen}
-                          alt={cat.strNombre}
+                          src={cat.strImagen || ''}
+                          alt={cat.strNombre || ''}
                           className="w-12 h-12 object-cover rounded-lg border border-gray-200"
                         />
                       </td>

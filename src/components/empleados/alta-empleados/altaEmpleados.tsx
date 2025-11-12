@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { User, Mail, Phone, MapPin, Calendar, Briefcase, DollarSign, Upload, X, Check } from 'lucide-react';
 import { verifyTokenEdge } from "../../../lib/verifyTokenEdge"; // 👈 usa esta versión
 import { RolEmpleado } from '@prisma/client';
+import { cp } from 'fs';
 
 const rolLabels: Record<RolEmpleado, string> = {
   SUPERADMIN: "Super Admin",
@@ -101,12 +102,64 @@ export default function AltaEmpleados() {
     if (!validateForm()) {
       return;
     }
-
+    
     setIsLoading(true);
-
-    // Simulación de envío
-    setTimeout(() => {
-      console.log('Datos del empleado:', formData);
+    
+    try {
+      const empleadoData = { 
+        strNombre: formData.nombre + ' ' + formData.apellidoPaterno + ' ' + formData.apellidoMaterno,
+        datFechaNacimiento: formData.fechaNacimiento,
+        strEmail: formData.email,
+        strTelefono: formData.telefono,
+        strDireccion: formData.direccion,
+        strCiudad: formData.ciudad,
+        strEstado: formData.estado,
+        intCP: formData.codigoPostal ? parseInt(formData.codigoPostal) : null,
+        strPuesto: formData.puesto,
+        strDepartamento: formData.departamento,
+        dblSalario: parseFloat(formData.salario),
+        datFechaIngreso: formData.fechaIngreso,
+        strTipoContrato: formData.tipoContrato,
+        strHorario: formData.horario,
+        strRol: formData.rol as RolEmpleado,
+        strUsuario: formData.usuario,
+        strContra: formData.contra
+      };
+      
+      const response = await fetch('/api/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: `
+            mutation CrearEmpleado($data: EmpleadoInput!) {
+              crearEmpleado(data: $data) {
+                intEmpleado
+                strNombre
+                strUsuario
+                strEmail
+                strRol
+                strPuesto
+                strDepartamento
+              }
+            }
+          `,
+          variables: {
+            data: empleadoData
+          }
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.errors) {
+        console.error('❌ Errores GraphQL:', result.errors);
+        throw new Error(result.errors[0].message);
+      }
+      
+      console.log('✅ Empleado creado:', result.data.crearEmpleado);
+      
       setIsLoading(false);
       setShowSuccess(true);
       
@@ -136,7 +189,15 @@ export default function AltaEmpleados() {
           rol: ''
         });
       }, 2000);
-    }, 1500);
+      
+    } catch (error) {
+      console.error("❌ Error al registrar empleado:", error);
+      setIsLoading(false);
+      alert('Error al registrar empleado. Por favor revisa la consola.');
+    }
+
+
+    
   };
 
   return (

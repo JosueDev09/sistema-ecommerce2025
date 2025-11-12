@@ -29,15 +29,27 @@ model tbClientes {
 }
 
 model tbEmpleados {
-  intEmpleado      Int         @id @default(autoincrement())
-  strNombre        String
-  strEmail         String      @unique
-  strUsuario       String      @unique
-  strContra        String
-  strRol           RolEmpleado
-  bolActivo        Boolean     @default(true)
-  datCreacion      DateTime    @default(now())
-  datActualizacion DateTime    @updatedAt
+  intEmpleado         Int          @id @default(autoincrement())
+  strNombre           String
+  datFechaNacimiento  DateTime?
+  strEmail            String       @unique
+  strTelefono         String?
+  strDireccion        String?
+  strCiudad           String?
+  strEstado           String?
+  intCP               Int?
+  strPuesto           String
+  strDepartamento     String
+  dblSalario          Float
+  datFechaIngreso     DateTime
+  strTipoContrato     String
+  strHorario          String
+  strUsuario          String       @unique
+  strContra           String
+  strRol              RolEmpleado
+  bolActivo           Boolean      @default(true)
+  datCreacion         DateTime     @default(now())
+  datActualizacion    DateTime     @updatedAt
 
   // Relaciones
   tbProductos tbProductos[] @relation("EmpleadoProductos")
@@ -67,15 +79,36 @@ model tbCategorias {
 }
 
 model tbProductos {
-  intProducto      Int      @id @default(autoincrement())
-  strNombre        String
-  strDescripcion   String?
-  dblPrecio        Float
-  intStock         Int      @default(0)
-  strImagen        String?
-  bolActivo        Boolean  @default(true)
-  datCreacion      DateTime @default(now())
-  datActualizacion DateTime @updatedAt
+  intProducto              Int      @id @default(autoincrement())
+  strNombre                String
+  strSKU                   String?  @unique
+  strMarca                 String?
+  strDescripcion           String?
+  strDescripcionLarga      String?
+  dblPrecio                Float
+  intStock                 Int      @default(0)
+  intStockMinimo           Int?
+  strImagen                String?
+  bolActivo                Boolean  @default(true)
+  bolDestacado             Boolean  @default(false)
+  strEstado                String   @default("activo")
+  
+  // Campos de descuento
+  bolTieneDescuento        Boolean  @default(false)
+  dblPrecioDescuento       Float?
+  intPorcentajeDescuento   Int?
+  datInicioDescuento       DateTime?
+  datFinDescuento          DateTime?
+  
+  // Campos adicionales
+  strPeso                  String?
+  strDimensiones           String?
+  strEtiquetas             String?
+  jsonVariantes            String?  // JSON string para las variantes
+  jsonImagenes             String?  // JSON string para múltiples imágenes
+  
+  datCreacion              DateTime @default(now())
+  datActualizacion         DateTime @updatedAt
 
   intCategoria Int
   tbCategoria  tbCategorias @relation(fields: [intCategoria], references: [intCategoria])
