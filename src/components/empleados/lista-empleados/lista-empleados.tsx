@@ -116,10 +116,11 @@ export default function ListaEmpleados() {
 
   const stats = {
     total: empleados.length,
-    activos: empleados.filter(e => e.strEstado === 'activo').length,
-    inactivos: empleados.filter(e => e.strEstado === 'inactivo').length,
+    activos: empleados.filter(e => e.bolActivo).length,
+    inactivos: empleados.filter(e => !e.bolActivo).length,
     nuevos: empleados.filter(e => {
-      const ingreso = new Date(e.datFechaIngreso);
+      const ingreso = new Date(Number(e.datFechaIngreso)); 
+      console.log('Fecha de ingreso empleado:', ingreso);
       const hoy = new Date();
       const diffMeses = (hoy.getFullYear() - ingreso.getFullYear()) * 12 + (hoy.getMonth() - ingreso.getMonth());
       return diffMeses <= 3;
@@ -285,7 +286,7 @@ export default function ListaEmpleados() {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-gray-900">{emp.strNombre}</p>
-                            <p className="text-xs text-gray-500">{emp.intEmpleado}</p>
+                            {/* <p className="text-xs text-gray-500">{emp.intEmpleado}</p> */}
                           </div>
                         </div>
                       </td>

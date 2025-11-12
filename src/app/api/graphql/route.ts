@@ -3,6 +3,7 @@ import { ApolloServer } from "@apollo/server";
 import { typeDefs } from "../graphql/schema";
 import { resolvers } from "../graphql/resolvers";
 import { verifyToken } from "./auth/utils";
+import { NextResponse } from "next/dist/server/web/spec-extension/response";
 
 const server = new ApolloServer({
   typeDefs,
@@ -21,4 +22,4 @@ const handler = startServerAndCreateNextHandler(server, {
 });
 
 // 3️⃣ Exporta los métodos correctamente
-export { handler as GET, handler as POST };
+export { handler as GET, handler as POST  };
