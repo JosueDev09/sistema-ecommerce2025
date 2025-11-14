@@ -261,7 +261,7 @@ export const typeDefs = gql`
 
     # Productos
     obtenerProductos: [Producto!]!
-    obtenerProducto(intProducto: Int!): Producto
+    obtenerProducto(strNombre: String!): Producto
 
     # Pedidos
     obtenerPedidos: [Pedido!]!

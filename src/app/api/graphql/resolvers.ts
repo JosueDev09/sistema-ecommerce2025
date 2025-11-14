@@ -22,8 +22,27 @@ export const resolvers = {
     obtenerPedidos: async () => {
       return await db.tbPedidos.findMany();
     },
-  },
+    obtenerProducto: async (_: any, { strNombre }: any) => {
+         // console.log("🔍 Buscando producto con slug:", strNombre);
 
+          const nombreNormalizado = strNombre
+            .replace(/-/g, " ")
+            .replace(/\b\w/g, (l: string) => l.toUpperCase());
+
+          return await db.tbProductos.findFirst({
+            where: {
+              strNombre: {
+                equals: nombreNormalizado,
+                mode: "insensitive",
+              },
+            },
+            include: {
+              tbCategoria: true,
+              tbCreadoPor: true,
+            },
+          });
+        },
+  },
   Mutation: {
     crearCategoria: async (_: any, { data }: any) => {
       console.log('Datos recibidos para crear categoría:', data);
