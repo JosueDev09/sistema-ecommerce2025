@@ -170,3 +170,12 @@ model tbDirecciones {
 
   tbCliente tbClientes @relation(fields: [intCliente], references: [intCliente])
 }
+
+model tbDescuentosCodigos {
+  intDescuentoCodigo Int    @id @default(autoincrement())
+  strCodigo          String @unique
+  dblPorcentajeDescuento       String
+  datFechaInicio     DateTime
+  datFechaFin        DateTime
+  bolActivo          Boolean @default(true)
+}

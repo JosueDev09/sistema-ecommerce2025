@@ -151,6 +151,15 @@ export const typeDefs = gql`
     strPais: String!
   }
 
+  type DescuentoCodigo {
+    intDescuentoCodigo: Int!
+    strCodigo: String!
+    dblPorcentajeDescuento: Float!
+    datFechaInicio: String!
+    datFechaFin: String!
+    bolActivo: Boolean!
+  }
+
   # ======================================================
   #  INPUTS (para Mutations)
   # ======================================================
@@ -266,6 +275,9 @@ export const typeDefs = gql`
     # Pedidos
     obtenerPedidos: [Pedido!]!
     obtenerPedido(intPedido: Int!): Pedido
+
+    # CodigosDescuento
+    obtenerDescuentosCodigos: [DescuentoCodigo!]!
   }
 
   # ======================================================

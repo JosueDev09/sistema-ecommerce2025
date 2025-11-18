@@ -41,7 +41,21 @@ export const resolvers = {
               tbCreadoPor: true,
             },
           });
-        },
+    },
+    obtenerDescuentosCodigos: async (_: any, {strCodigo}: any) => {
+      const nombreNormalizado = strCodigo
+            .replace(/-/g, " ")
+            .replace(/\b\w/g, (l: string) => l.toUpperCase());
+          
+      return await db.tbDescuentosCodigos.findMany(
+        { where: {
+          strCodigo: {
+            equals: nombreNormalizado,
+            mode: "insensitive",
+          },
+        } }
+      );
+    },
   },
   Mutation: {
     crearCategoria: async (_: any, { data }: any) => {
