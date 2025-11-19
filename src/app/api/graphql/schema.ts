@@ -154,7 +154,7 @@ export const typeDefs = gql`
   type DescuentoCodigo {
     intDescuentoCodigo: Int!
     strCodigo: String!
-    dblPorcentajeDescuento: Float!
+    intPorcentajeDescuento: Int!
     datFechaInicio: String!
     datFechaFin: String!
     bolActivo: Boolean!
@@ -277,7 +277,7 @@ export const typeDefs = gql`
     obtenerPedido(intPedido: Int!): Pedido
 
     # CodigosDescuento
-    obtenerDescuentosCodigos: [DescuentoCodigo!]!
+    obtenerDescuentoCodigo(strCodigo: String!): DescuentoCodigo
   }
 
   # ======================================================

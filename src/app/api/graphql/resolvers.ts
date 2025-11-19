@@ -42,19 +42,25 @@ export const resolvers = {
             },
           });
     },
-    obtenerDescuentosCodigos: async (_: any, {strCodigo}: any) => {
-      const nombreNormalizado = strCodigo
-            .replace(/-/g, " ")
-            .replace(/\b\w/g, (l: string) => l.toUpperCase());
-          
-      return await db.tbDescuentosCodigos.findMany(
-        { where: {
+    obtenerDescuentoCodigo: async (_: any, {strCodigo}: any) => {
+      console.log("🔍 Buscando código de descuento:", strCodigo);
+      
+      const descuento = await db.tbDescuentosCodigos.findFirst({
+        where: {
           strCodigo: {
-            equals: nombreNormalizado,
+            equals: strCodigo,
             mode: "insensitive",
           },
-        } }
-      );
+        }
+      });
+      
+      if (!descuento) {
+        console.log("❌ Código de descuento no encontrado:", strCodigo);
+        throw new Error("Código de descuento no válido o no existe");
+      }
+      
+      console.log("✅ Código encontrado:", descuento);
+      return descuento;
     },
   },
   Mutation: {
