@@ -4,6 +4,7 @@ import { Search, Filter, Plus, Package, CheckCircle, XCircle, Eye, Edit, Trash2,
 import { useRouter } from "next/navigation";
 import { formatFecha } from "@/src/lib/formatFecha";
 import SweetAlert from "sweetalert2";
+import { formatFechas } from "@/src/utils/formatearFechas";
 
 interface Producto {
   intProducto: number;
@@ -1186,6 +1187,7 @@ function ModalEdicion({
                   </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
+                  
                   <input
                     type="checkbox"
                     name="bolTieneDescuento"
@@ -1200,6 +1202,7 @@ function ModalEdicion({
                           datInicioDescuento: undefined,
                           datFinDescuento: undefined
                         }));
+                        
                       }
                     }}
                     className="sr-only peer"
@@ -1293,8 +1296,20 @@ function ModalEdicion({
                           value={(() => {
                             if (!formData.datInicioDescuento) return '';
                             try {
-                              const date = new Date(formData.datInicioDescuento);
-                              if (isNaN(date.getTime())) return '';
+                              // Si ya está en formato datetime-local (YYYY-MM-DDTHH:mm), retornarlo directamente
+                              if (typeof formData.datInicioDescuento === 'string' && formData.datInicioDescuento.includes('T') && formData.datInicioDescuento.length === 16) {
+                                return formData.datInicioDescuento;
+                              }
+                              
+                              // Convertir string timestamp a número
+                              const timestamp = typeof formData.datInicioDescuento === 'string' 
+                                ? parseInt(formData.datInicioDescuento, 10) 
+                                : formData.datInicioDescuento;
+                              
+                              const date = new Date(timestamp);
+                              if (isNaN(date.getTime())) {
+                                return '';
+                              }
                               return date.toISOString().slice(0, 16);
                             } catch {
                               return '';
@@ -1315,8 +1330,21 @@ function ModalEdicion({
                           value={(() => {
                             if (!formData.datFinDescuento) return '';
                             try {
-                              const date = new Date(formData.datFinDescuento);
-                              if (isNaN(date.getTime())) return '';
+                              // Si ya está en formato datetime-local (YYYY-MM-DDTHH:mm), retornarlo directamente
+                              if (typeof formData.datFinDescuento === 'string' && formData.datFinDescuento.includes('T') && formData.datFinDescuento.length === 16) {
+                                return formData.datFinDescuento;
+                              }
+                              
+                              // Convertir string timestamp a número
+                              const timestamp = typeof formData.datFinDescuento === 'string' 
+                                ? parseInt(formData.datFinDescuento, 10) 
+                                : formData.datFinDescuento;
+                              
+                              const date = new Date(timestamp);
+                              if (isNaN(date.getTime())) {
+                                return '';
+                              }
+                              console.log(date);
                               return date.toISOString().slice(0, 16);
                             } catch {
                               return '';
