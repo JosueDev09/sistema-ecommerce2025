@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useState, useEffect } from "react";
-import { Search, Filter, Plus, Package, CheckCircle, XCircle, Eye, Edit, Trash2, TrendingUp, AlertCircle, DollarSign, X, Tag, Percent, Calendar, Info } from "lucide-react";
+import { useState, useEffect, use } from "react";
+import { Search, Filter, Plus, Package, CheckCircle, XCircle, Eye, Edit, Trash2, TrendingUp, AlertCircle, DollarSign, X, Tag, Percent, Calendar, Info, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatFecha } from "@/src/lib/formatFecha";
 import SweetAlert from "sweetalert2";
@@ -910,6 +911,8 @@ function ModalEdicion({
   onSave: (producto: Producto) => void;
 }) {
   const [formData, setFormData] = useState<Producto>(producto);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showSuccess,setShowSuccess] =useState(false);
   const [variantes, setVariantes] = useState<{nombre: string; valor: string}[]>(
     producto.jsonVariantes ? JSON.parse(producto.jsonVariantes) : [{nombre: '', valor: ''}]
   );
@@ -981,19 +984,117 @@ function ModalEdicion({
     calcularPrecioDescuento();
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Preparar datos con variantes e imágenes
-    const productoActualizado = {
-      ...formData,
-      jsonVariantes: variantes.length > 0 && variantes[0].nombre ? JSON.stringify(variantes) : undefined,
-      jsonImagenes: images.length > 0 ? JSON.stringify(images) : undefined,
-      strImagen: images.length > 0 ? images[0] : formData.strImagen,
-    };
-    
-    onSave(productoActualizado);
+
+  const handleSubmit = async () => {
+    // if (!validateForm()) {
+    //   return;
+    // }
+
+    setIsLoading(true);
+
+    try {
+      // Preparar los datos para GraphQL
+      const productData = {
+        strNombre: formData.strNombre,
+        strSKU: formData.strSKU,
+        strMarca: formData.strMarca,
+        strDescripcion: formData.strDescripcion,
+        dblPrecio: Number(formData.dblPrecio),
+        intStock: Number(formData.intStock),
+        intStockMinimo:  Number(formData.intStockMinimo)|| null,
+        strImagen: images.length > 0 ? images[0] : null, // Primera imagen como principal
+        bolActivo: formData.bolActivo,
+        bolDestacado: formData.bolDestacado,
+        strEstado: formData.strEstado,
+        
+        // Campos de descuento
+        bolTieneDescuento: formData.bolTieneDescuento,
+        dblPrecioDescuento:  Number(formData.dblPrecioDescuento) || null,
+        intPorcentajeDescuento:  Number(formData.intPorcentajeDescuento) || null,
+        datInicioDescuento: formData.datInicioDescuento || null,
+        datFinDescuento: formData.datFinDescuento || null,
+        
+        // Campos adicionales
+        strPeso: formData.strPeso || null,
+        strDimensiones: formData.strDimensiones || null,
+        strEtiquetas: formData.strEtiquetas || null,
+        jsonVariantes: variantes.length > 0 && variantes[0].nombre ? JSON.stringify(variantes) : null,
+        jsonImagenes: images.length > 0 ? JSON.stringify(images) : null,
+        
+        // Categoría
+        intCategoria: formData.tbCategoria.intCategoria,
+      };
+
+      console.log('Datos a enviar:', productData);
+
+      const res = await fetch('/api/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: `
+            mutation ActualizarProducto($intProducto:Int!,$data: ProductoUpdateInput!) {
+              actualizarProducto(intProducto:$intProducto,data: $data) {
+                intProducto
+                strNombre
+                strSKU
+                dblPrecio
+                intStock
+                tbCategoria {
+                  strNombre
+                }
+              }
+            }
+          `,
+          variables: {
+            intProducto: formData.intProducto,
+            data: productData
+          }
+        }),
+      });
+
+      const result = await res.json();
+      //console.log('Respuesta del servidor:', result);
+      
+      if (result.errors) {
+        throw new Error(result.errors[0]?.message || 'Error al actualizar el producto');
+      }
+
+      if (!res.ok) {
+        throw new Error('Error al actualizar el producto');
+      }
+
+      // Mostrar mensaje de éxito
+      setShowSuccess(true);
+      
+      // Limpiar formulario después de 2 segundos
+      setTimeout(() => {
+        
+        setShowSuccess(false);
+      }, 3000);
+
+    } catch(error) {
+      console.error('Error al crear producto:', error);
+      alert('Error al crear el producto: ' + (error as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  // const handleSubmit = (e: React.FormEvent) => {
+  //   e.preventDefault();
+    
+  //   // Preparar datos con variantes e imágenes
+  //   const productoActualizado = {
+  //     ...formData,
+  //     jsonVariantes: variantes.length > 0 && variantes[0].nombre ? JSON.stringify(variantes) : undefined,
+  //     jsonImagenes: images.length > 0 ? JSON.stringify(images) : undefined,
+  //     strImagen: images.length > 0 ? images[0] : formData.strImagen,
+  //   };
+    
+  //   onSave(productoActualizado);
+  // };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -1019,10 +1120,25 @@ function ModalEdicion({
             </button>
           </div>
 
+       
+
           {/* Contenido */}
           <div className="p-6 space-y-6">
             {/* Información Básica */}
             <div className="bg-white border-2 border-gray-100 rounded-xl p-4">
+
+                  {/* Success Message */}
+              {showSuccess && (
+                <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
+                  <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Check className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-emerald-900">¡Producto actualizado exitosamente!</p>
+                    <p className="text-sm text-emerald-700">El producto ha sido actualizado al inventario</p>
+                  </div>
+                </div>
+              )}
               <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <Package className="w-5 h-5 text-blue-600" />
                 Información Básica
@@ -1496,7 +1612,7 @@ function ModalEdicion({
           {/* Footer */}
           <div className="sticky bottom-0 bg-gray-50 border-t border-gray-100 p-6 flex gap-3">
             <button
-              type="submit"
+              onClick={handleSubmit}
               className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors"
             >
               Guardar Cambios

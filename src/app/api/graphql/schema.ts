@@ -231,6 +231,37 @@ export const typeDefs = gql`
     intCategoria: Int!
     intCreadoPorId: Int
   }
+ input ProductoUpdateInput {
+    strNombre: String!
+    strSKU: String
+    strMarca: String
+    strDescripcion: String
+    dblPrecio: Float!
+    intStock: Int!
+    intStockMinimo: Int
+    strImagen: String
+    bolActivo: Boolean
+    bolDestacado: Boolean
+    strEstado: String
+    
+    # Campos de descuento
+    bolTieneDescuento: Boolean
+    dblPrecioDescuento: Float
+    intPorcentajeDescuento: Int
+    datInicioDescuento: String
+    datFinDescuento: String
+    
+    # Campos adicionales
+    strPeso: String
+    strDimensiones: String
+    strEtiquetas: String
+    jsonVariantes: String
+    jsonImagenes: String
+    
+    intCategoria: Int!
+    intCreadoPorId: Int
+  }
+
 
   input PedidoInput {
     intCliente: Int!
@@ -303,6 +334,7 @@ export const typeDefs = gql`
 
     # Productos
     crearProducto(data: ProductoInput!): Producto!
+    actualizarProducto(intProducto: Int!, data: ProductoUpdateInput!): Producto!
     eliminarProducto(intProducto: Int!): Boolean!
 
     # Pedidos

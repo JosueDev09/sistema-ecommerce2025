@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, use } from 'react';
 import { Package, DollarSign, Tag, Image, X, Check, Upload, Plus, Trash2, Info, Percent, Calendar } from 'lucide-react';
 

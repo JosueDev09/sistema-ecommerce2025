@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from "../../../lib/db"; // tu PrismaClient global
 import { verifyPassword, generateToken } from "./auth/utils";
 
@@ -128,6 +129,62 @@ export const resolvers = {
       
       console.log('Producto creado exitosamente:', nuevoProducto);
       return nuevoProducto;
+    },
+
+    actualizarProducto: async (_: any, { intProducto,data }: any) => {
+     // console.log('Datos recibidos para crear producto:', data);
+      
+      // Preparar los datos para la creación
+      const productData: any = {
+        strNombre: data.strNombre,
+        strSKU: data.strSKU || null,
+        strMarca: data.strMarca || null,
+        strDescripcion: data.strDescripcion || null,
+        strDescripcionLarga: data.strDescripcionLarga || null,
+        dblPrecio: parseFloat(data.dblPrecio),
+        intStock: parseInt(data.intStock),
+        intStockMinimo: data.intStockMinimo ? parseInt(data.intStockMinimo) : null,
+        strImagen: data.strImagen || null,
+        bolActivo: data.bolActivo !== undefined ? data.bolActivo : true,
+        bolDestacado: data.bolDestacado || false,
+        strEstado: data.strEstado || 'activo',
+        
+        // Campos de descuento
+        bolTieneDescuento: data.bolTieneDescuento || false,
+        dblPrecioDescuento: data.dblPrecioDescuento ? parseFloat(data.dblPrecioDescuento) : null,
+        intPorcentajeDescuento: data.intPorcentajeDescuento ? parseInt(data.intPorcentajeDescuento) : null,
+        datInicioDescuento: data.datInicioDescuento ? new Date(data.datInicioDescuento) : null,
+        datFinDescuento: data.datFinDescuento ? new Date(data.datFinDescuento) : null,
+        
+        // Campos adicionales
+        strPeso: data.strPeso || null,
+        strDimensiones: data.strDimensiones || null,
+        strEtiquetas: data.strEtiquetas || null,
+        jsonVariantes: data.jsonVariantes || null,
+        jsonImagenes: data.jsonImagenes || null,
+        
+        // Relaciones
+        intCategoria: parseInt(data.intCategoria),
+      };
+      
+      // Agregar empleado creador si existe
+      // if (data.intCreadoPorId) {
+      //   productData.intCreadoPorId = parseInt(data.intCreadoPorId);
+      // }
+      
+      const actualizarProducto = await db.tbProductos.update({
+        where: {
+          intProducto: intProducto, // tu PK exacta
+        },
+        data: productData, // tus campos a actualizar
+        include: { 
+          tbCategoria: true,
+          tbCreadoPor: true
+        },
+      });
+      
+      //console.log('Producto actualizado exitosamente:', actualizarProducto);
+      return actualizarProducto;
     },
 
     eliminarProducto: async (_: any, { intProducto }: any) => {
