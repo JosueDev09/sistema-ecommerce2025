@@ -223,9 +223,7 @@ export const resolvers = {
     },
 
    login: async (_: any, { data }: any) => {
-  const { strUsuario, strContra } = data; // ✅ corregido (antes era strPassword)
-
-  //console.log('Credenciales recibidas:', data);
+  const { strUsuario, strContra } = data;
 
   // Buscar primero en empleados
   const empleado = await db.tbEmpleados.findUnique({ where: { strUsuario } });
@@ -255,9 +253,12 @@ export const resolvers = {
     rol,
   });
 
+  console.log("Usuario que se ha logueado:", usuario);
+
+  // ✅ Retornar el objeto completo de la BD para que GraphQL pueda resolver el tipo
   return {
     token,
-    usuario,
+    usuario: usuario, // Retornar el objeto original completo
   };
     },
  

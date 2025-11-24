@@ -472,7 +472,7 @@ export default function ListaProductos() {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <img
-                              src={prod.strImagen || "/placeholder-product.png"}
+                              src={prod.jsonImagenes || "/placeholder-product.png"}
                               alt={prod.strNombre}
                               className="w-12 h-12 object-cover rounded-lg border border-gray-200"
                             />
