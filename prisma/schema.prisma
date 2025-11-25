@@ -133,6 +133,7 @@ model tbPedidos {
 
   tbCliente tbClientes       @relation(fields: [intCliente], references: [intCliente])
   tbItems   tbPedidosItems[]
+  tbPago           tbPagos?         // Relación con pagos
 }
 
 model tbPedidosItems {
@@ -153,6 +154,33 @@ enum EstadoPedido {
   ENVIADO
   ENTREGADO
   CANCELADO
+}
+
+// ======================================================
+//  PAGOS
+// ======================================================
+
+model tbPagos {
+  intPago                 Int      @id @default(autoincrement())
+  intPedido               Int      @unique
+  strMercadoPagoId        String   @unique  // ID de pago de MP
+  strMetodoPago           String   // tarjeta, efectivo, transferencia
+  strEstado               EstadoPago @default(PENDIENTE)
+  dblMonto                Float
+  intCuotas               Int?     // Para meses sin intereses
+  jsonDetallesPago        String?  // JSON con detalles adicionales
+  datCreacion             DateTime @default(now())
+  datActualizacion        DateTime @updatedAt
+  
+  tbPedido                tbPedidos @relation(fields: [intPedido], references: [intPedido])
+}
+
+enum EstadoPago {
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+  CANCELADO
+  REEMBOLSADO
 }
 
 // ======================================================

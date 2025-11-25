@@ -222,6 +222,22 @@ export const resolvers = {
       return nuevoEmpleado;
     },
 
+    crearCliente: async (_: any, { data }: any) => {
+      console.log('Datos recibidos para crear cliente:', data);
+    },
+    crearDireccionCliente: async (_: any, { data }: any) => {
+      console.log('Datos recibidos para crear dirección de cliente:', data);
+    },
+
+    crearPedido: async (_: any, { data }: any) => {
+      console.log('Datos recibidos para crear pedido:', data);
+    },
+
+    crearPago: async (_: any, { data }: any) => {
+      console.log('Datos recibidos para crear pago:', data);
+    },
+
+
    login: async (_: any, { data }: any) => {
   const { strUsuario, strContra } = data;
 
