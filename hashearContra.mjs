@@ -5,13 +5,29 @@ import bcrypt from "bcryptjs";
 
 dotenv.config();
 
+// Validar y convertir variables de entorno
 const clientConfig = {
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_DATABASE,
-  password: process.env.DB_PASSWORD,
-  port: parseInt(process.env.DB_PORT),
+  user: String(process.env.DB_USER || "postgres"),
+  host: String(process.env.DB_HOST || "localhost"),
+  database: String(process.env.DB_DATABASE || "dbStore"),
+  password: String(process.env.DB_PASSWORD || ""),
+  port: parseInt(process.env.DB_PORT || "5432", 10),
 };
+
+// Validar configuración antes de continuar
+console.log("🔍 Verificando configuración de base de datos...");
+console.log(`   Usuario: ${clientConfig.user}`);
+console.log(`   Host: ${clientConfig.host}`);
+console.log(`   Base de datos: ${clientConfig.database}`);
+console.log(`   Puerto: ${clientConfig.port}`);
+console.log(`   Contraseña: ${clientConfig.password ? '***' : '(vacía)'}\n`);
+
+if (!clientConfig.password) {
+  console.error("❌ ERROR: La contraseña de la base de datos está vacía.");
+  console.error("   Por favor verifica tu archivo .env y asegúrate de tener:");
+  console.error("   DB_PASSWORD=tu_contraseña\n");
+  process.exit(1);
+}
 
 const TABLES_TO_CHECK = [
   // intenta en estas tablas/columnas (orden lógico)

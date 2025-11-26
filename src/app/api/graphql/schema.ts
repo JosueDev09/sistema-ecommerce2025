@@ -20,6 +20,14 @@ export const typeDefs = gql`
     CANCELADO
   }
 
+  enum EstadoPago {
+    PENDIENTE
+    APROBADO
+    RECHAZADO
+    CANCELADO
+    REEMBOLSADO
+  }
+
     # ======================================================
   #  INICIO DE SESIÓN Y AUTENTICACIÓN
   # ======================================================
@@ -134,22 +142,34 @@ export const typeDefs = gql`
 
   type Pedido {
     intPedido: Int!
+    intCliente: Int!
+    intDireccion: Int
+    dblSubtotal: Float!      # ✨ NUEVO
+    dblCostoEnvio: Float!    # ✨ NUEVO
     dblTotal: Float!
-    strEstado: EstadoPedido!
+    strEstado: String!
+    strMetodoEnvio: String   # ✨ NUEVO
+    strNotasEnvio: String    # ✨ NUEVO
     datPedido: String!
-    datActualizacion: String!
     tbCliente: Cliente!
-    tbItems: [PedidoItem!]
-  }
+    tbDireccion: Direccion   # ✨ NUEVO
+    tbItems: [PedidoItem!]!
+    tbPago: Pago
+}
 
   type Direccion {
     intDireccion: Int!
+    intCliente: Int!
     strCalle: String!
+    strNumeroExterior: String!
+    strNumeroInterior: String
+    strColonia: String!
     strCiudad: String!
     strEstado: String!
     strCP: String!
     strPais: String!
-  }
+    strReferencias: String
+}
 
   type DescuentoCodigo {
     intDescuentoCodigo: Int!
@@ -160,6 +180,31 @@ export const typeDefs = gql`
     bolActivo: Boolean!
   }
 
+  type Pago {
+    intPago: Int!
+    intPedido: Int!
+    strMercadoPagoId: String!
+    strMetodoPago: String!
+    strEstado: EstadoPago!
+    dblMonto: Float!
+    intCuotas: Int
+    jsonDetallesPago: String
+    datCreacion: String!
+    datActualizacion: String!
+    tbPedido: Pedido!
+  }
+
+  type Tarjeta {
+    intTarjeta: Int!
+    intCliente: Int!
+    strNumeroTarjeta: String!   # Solo últimos 4 dígitos
+    strNombreTarjeta: String!
+    strTipoTarjeta: String!
+    strFechaExpiracion: String!
+    datCreacion: String!
+  }
+
+
   # ======================================================
   #  INPUTS (para Mutations)
   # ======================================================
@@ -169,6 +214,14 @@ export const typeDefs = gql`
     strEmail: String!
     strPassword: String!
     strTelefono: String
+  }
+
+  input ClienteInvitadoInput {
+    strNombre: String!
+    strEmail: String!
+    strTelefono: String
+    strUsuario: String!
+    strContra: String!
   }
 
   input EmpleadoInput {
@@ -265,21 +318,48 @@ export const typeDefs = gql`
 
   input PedidoInput {
     intCliente: Int!
-    tbItems: [PedidoItemInput!]!
-  }
+    intDireccion: Int              # ✨ NUEVO
+    dblSubtotal: Float!            # ✨ NUEVO
+    dblCostoEnvio: Float!          # ✨ NUEVO
+    dblTotal: Float!
+    strMetodoEnvio: String!        # ✨ NUEVO: "express" | "estandar" | "recoger"
+    strNotasEnvio: String          # ✨ NUEVO
+    items: [PedidoItemInput!]!
+}
 
   input PedidoItemInput {
     intProducto: Int!
     intCantidad: Int!
+    dblSubtotal: Float!
+  }
+
+  input TarjetaInput {
+    intCliente: Int!
+    strNumeroTarjeta: String!   # Solo últimos 4 dígitos
+    strNombreTarjeta: String!
+    strTipoTarjeta: String!     # visa, mastercard, amex
+    strFechaExpiracion: String! # MM/YY
   }
 
   input DireccionInput {
     intCliente: Int!
     strCalle: String!
+    strNumeroExterior: String!
+    strNumeroInterior: String
+    strColonia: String!
     strCiudad: String!
     strEstado: String!
     strCP: String!
     strPais: String
+    strReferencias: String
+  }
+
+  input PagoInput {
+    intPedido: Int!
+    strMetodoPago: String!
+    dblMonto: Float!
+    intCuotas: Int
+    jsonDetallesPago: String
   }
 
   # ======================================================
@@ -309,6 +389,17 @@ export const typeDefs = gql`
 
     # CodigosDescuento
     obtenerDescuentoCodigo(strCodigo: String!): DescuentoCodigo
+
+    # Pagos
+    obtenerPago(intPago: Int!): Pago
+    obtenerPagosPorPedido(intPedido: Int!): [Pago!]
+
+    # Direcciones
+    obtenerDireccionesCliente(intCliente: Int!): [Direccion!]!
+
+    # Tarjetas
+    obtenerTarjetasCliente(intCliente: Int!): [Tarjeta!]!
+
   }
 
   # ======================================================
@@ -322,6 +413,7 @@ export const typeDefs = gql`
 
     # Clientes
     crearCliente(data: ClienteInput!): Cliente!
+    crearClienteInvitado(data: ClienteInvitadoInput!): Cliente!
     eliminarCliente(intCliente: Int!): Boolean!
 
     # Empleados
@@ -344,5 +436,13 @@ export const typeDefs = gql`
     # Direcciones
     crearDireccion(data: DireccionInput!): Direccion!
     eliminarDireccion(intDireccion: Int!): Boolean!
+
+    # Pagos
+    crearPago(data: PagoInput!): Pago!
+    actualizarPago(intPago: Int!, strMercadoPagoId: String!, strEstado: EstadoPago!): Pago!
+
+    # Tarjetas
+    crearTarjeta(data: TarjetaInput!): Tarjeta!
+    eliminarTarjeta(intTarjeta: Int!): Boolean!
   }
 `;

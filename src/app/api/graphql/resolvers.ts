@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from "../../../lib/db"; // tu PrismaClient global
 import { verifyPassword, generateToken } from "./auth/utils";
+import bcrypt from "bcryptjs";
 
 export const resolvers = {
 
@@ -63,6 +64,78 @@ export const resolvers = {
       console.log("✅ Código encontrado:", descuento);
       return descuento;
     },
+
+     obtenerDireccionesCliente: async (_: any,{ intCliente }: { intCliente: number }) => {
+      try {
+       
+        const direcciones =await db.tbDirecciones.findMany({
+          where: { intCliente },
+          orderBy: { intDireccion: 'desc' } // La más reciente
+        });
+
+        return direcciones || [];
+      } catch (error) {
+        console.error("Error al obtener dirección:", error);
+        throw new Error("Error al cargar la dirección del cliente");
+      }
+  },
+
+   
+
+  // ======================================================
+  //  PAGOS
+  // ======================================================
+    obtenerPago: async (_: any, { intPago }: any) => {
+      const pago = await db.tbPagos.findUnique({
+        where: { intPago },
+        include: {
+          tbPedido: {
+            include: {
+              tbClientes: true,
+              tbItems: {
+                include: {
+                  tbProducto: true
+                }
+              }
+            }
+          }
+        }
+      });
+      
+      if (!pago) {
+        throw new Error("Pago no encontrado");
+      }
+      
+      return pago;
+    },
+
+    obtenerPagosPorPedido: async (_: any, { intPedido }: any) => {
+      return await db.tbPagos.findMany({
+        where: { intPedido },
+        include: {
+          tbPedido: {
+            include: {
+              tbClientes: true
+            }
+          }
+        }
+      });
+    },
+
+    obtenerTarjetasCliente: async (_: any,{ intCliente }: { intCliente: number }) => {
+        try {
+          const tarjetas = await db.tbTarjetas.findMany({
+            where: { intCliente },
+            orderBy: { datCreacion: 'desc' } // Las más recientes primero
+          });
+
+          return tarjetas;
+        } catch (error) {
+          console.error("Error al obtener tarjetas:", error);
+          throw new Error("Error al cargar las tarjetas del cliente");
+        }
+},
+
   },
   Mutation: {
     crearCategoria: async (_: any, { data }: any) => {
@@ -224,18 +297,345 @@ export const resolvers = {
 
     crearCliente: async (_: any, { data }: any) => {
       console.log('Datos recibidos para crear cliente:', data);
-    },
-    crearDireccionCliente: async (_: any, { data }: any) => {
-      console.log('Datos recibidos para crear dirección de cliente:', data);
+      try {
+        const nuevoCliente = await db.tbClientes.create({
+          data: {
+            strNombre: data.strNombre,
+            strEmail: data.strEmail,
+            strTelefono: data.strTelefono || null,
+            strUsuario: data.strUsuario || null,
+            strContra: data.strContra || null, // TODO: Hashear la contraseña
+          }
+        });
+        return nuevoCliente;
+      } catch (error) {
+        console.error('Error al crear cliente:', error);
+      }
     },
 
-    crearPedido: async (_: any, { data }: any) => {
-      console.log('Datos recibidos para crear pedido:', data);
+    // Crear cliente invitado (para checkout)
+    crearClienteInvitado: async (_: any, { data }: any) => {
+      try {
+        // Verificar si el email ya existe
+        const clienteExistente = await db.tbClientes.findUnique({
+          where: { strEmail: data.strEmail },
+        });
+
+        if (clienteExistente) {
+          throw new Error("El email ya está registrado");
+        }
+
+        // Hash de la contraseña
+        const hashedPassword = await bcrypt.hash(data.strContra, 10);
+
+        // Crear el cliente invitado
+        const nuevoCliente = await db.tbClientes.create({
+          data: {
+            strNombre: data.strNombre,
+            strEmail: data.strEmail,
+            strTelefono: data.strTelefono || null,
+            strUsuario: data.strUsuario,
+            strContra: hashedPassword,
+            bolActivo: true,
+          },
+        });
+
+        console.log('✅ Cliente invitado creado:', nuevoCliente.intCliente);
+        return nuevoCliente;
+      } catch (error: any) {
+        console.error('❌ Error al crear cliente invitado:', error);
+        throw new Error(error.message || "No se pudo crear el cliente");
+      }
+    },
+
+    crearDireccion: async (_: any, { data }: any) => {
+      try {
+        // Verificar que el cliente existe
+        const cliente = await db.tbClientes.findUnique({
+          where: { intCliente: data.intCliente },
+        });
+
+        if (!cliente) {
+          throw new Error("Cliente no encontrado");
+        }
+
+        // Crear la dirección
+        const nuevaDireccion = await db.tbDirecciones.create({
+          data: {
+            intCliente: data.intCliente,
+            strCalle: data.strCalle,
+            strCiudad: data.strCiudad,
+            strEstado: data.strEstado,
+            strCP: data.strCP,
+            strPais: data.strPais || "México",
+            strNumeroExterior: data.strNumeroExterior,
+            strNumeroInterior: data.strNumeroInterior || null,
+            strColonia: data.strColonia,
+            strReferencias: data.strReferencias || null,
+          },
+        });
+
+        console.log('✅ Dirección creada:', nuevaDireccion.intDireccion);
+        return nuevaDireccion;
+      } catch (error: any) {
+        console.error('❌ Error al crear dirección:', error);
+        throw new Error(error.message || "No se pudo guardar la dirección");
+      }
+    },
+
+     crearPedido: async(  _: any,  { data }: any) => {
+      try {
+        // Validar cliente
+        const cliente = await db.tbClientes.findUnique({
+          where: { intCliente: data.intCliente },
+        });
+
+        if (!cliente) {
+          throw new Error("Cliente no encontrado");
+        }
+
+        // Validar dirección si el método requiere envío
+        if (data.strMetodoEnvio !== "recoger" && !data.intDireccion) {
+          throw new Error("Se requiere una dirección de envío");
+        }
+
+        // Iniciar transacción
+        const pedido = await db.$transaction(async (prisma: any) => {
+          // 1. Validar stock de productos
+          for (const item of data.items) {
+            const producto = await prisma.tbProductos.findUnique({
+              where: { intProducto: item.intProducto },
+            });
+
+            if (!producto) {
+              throw new Error(`Producto ${item.intProducto} no encontrado`);
+            }
+
+            if (producto.intStock < item.intCantidad) {
+              throw new Error(`Stock insuficiente para ${producto.strNombre}`);
+            }
+          }
+
+          // 2. Crear el pedido con información de envío
+          const nuevoPedido = await prisma.tbPedidos.create({
+            data: {
+              intCliente: data.intCliente,
+              intDireccion: data.intDireccion,        // ✨ NUEVO
+              dblSubtotal: data.dblSubtotal,          // ✨ NUEVO
+              dblCostoEnvio: data.dblCostoEnvio,      // ✨ NUEVO
+              dblTotal: data.dblTotal,
+              strMetodoEnvio: data.strMetodoEnvio,    // ✨ NUEVO
+              strNotasEnvio: data.strNotasEnvio,      // ✨ NUEVO
+              strEstado: "PENDIENTE",
+            },
+          });
+
+          // 3. Crear items del pedido
+          for (const item of data.items) {
+            await prisma.tbPedidosItems.create({
+              data: {
+                intPedido: nuevoPedido.intPedido,
+                intProducto: item.intProducto,
+                intCantidad: item.intCantidad,
+                dblPrecioUnitario: item.dblSubtotal / item.intCantidad,
+                dblSubtotal: item.dblSubtotal,
+              },
+            });
+
+            // 4. Actualizar stock
+            await prisma.tbProductos.update({
+              where: { intProducto: item.intProducto },
+              data: {
+                intStock: {
+                  decrement: item.intCantidad,
+                },
+              },
+            });
+          }
+
+          return nuevoPedido;
+        });
+
+        // 5. Retornar pedido con relaciones
+        return await db.tbPedidos.findUnique({
+          where: { intPedido: pedido.intPedido },
+          include: {
+            tbClientes: true,
+            tbDirecciones: true,  // ✨ NUEVO
+            tbItems: {
+              include: {
+                tbProducto: true,
+              },
+            },
+          },
+        });
+      } catch (error) {
+        console.error("Error al crear pedido:", error);
+        throw error;
+      }
     },
 
     crearPago: async (_: any, { data }: any) => {
-      console.log('Datos recibidos para crear pago:', data);
+      try {
+        // Verificar que el pedido existe
+        const pedido = await db.tbPedidos.findUnique({
+          where: { intPedido: data.intPedido },
+        });
+
+        if (!pedido) {
+          throw new Error("Pedido no encontrado");
+        }
+
+        // Verificar que no exista ya un pago para este pedido
+        const pagoExistente = await db.tbPagos.findUnique({
+          where: { intPedido: data.intPedido },
+        });
+
+        if (pagoExistente) {
+          throw new Error("Ya existe un pago registrado para este pedido");
+        }
+
+        // Generar un ID temporal de MercadoPago (se actualizará después con el real)
+        const mercadoPagoIdTemporal = `MP-TEMP-${Date.now()}-${data.intPedido}`;
+
+        // Crear el registro de pago
+        const nuevoPago = await db.tbPagos.create({
+          data: {
+            intPedido: data.intPedido,
+            strMercadoPagoId: mercadoPagoIdTemporal,
+            strMetodoPago: data.strMetodoPago,
+            strEstado: "PENDIENTE",
+            dblMonto: data.dblMonto,
+            intCuotas: data.intCuotas || null,
+            jsonDetallesPago: data.jsonDetallesPago || null,
+          },
+        });
+
+        // Actualizar el estado del pedido a EN_PROCESO
+        await db.tbPedidos.update({
+          where: { intPedido: data.intPedido },
+          data: { strEstado: "EN_PROCESO" },
+        });
+
+        console.log('✅ Pago creado:', nuevoPago.intPago);
+        return nuevoPago;
+      } catch (error: any) {
+        console.error('❌ Error al crear pago:', error);
+        throw new Error(error.message || "No se pudo registrar el pago");
+      }
     },
+
+    // Actualizar pago después de respuesta de MercadoPago
+    actualizarPago: async (_: any, { intPago, strMercadoPagoId, strEstado }: any) => {
+      try {
+        // Actualizar el pago con el ID real de MercadoPago y el nuevo estado
+        const pagoActualizado = await db.tbPagos.update({
+          where: { intPago },
+          data: {
+            strMercadoPagoId,
+            strEstado,
+          },
+        });
+
+        // Si el pago fue aprobado, actualizar el estado del pedido
+        if (strEstado === "APROBADO") {
+          await db.tbPedidos.update({
+            where: { intPedido: pagoActualizado.intPedido },
+            data: { strEstado: "PAGADO" },
+          });
+
+          console.log('✅ Pedido actualizado a PAGADO');
+        }
+
+        // Si el pago fue rechazado o cancelado, cancelar el pedido y devolver el stock
+        if (strEstado === "RECHAZADO" || strEstado === "CANCELADO") {
+          const pedido = await db.tbPedidos.findUnique({
+            where: { intPedido: pagoActualizado.intPedido },
+            include: { tbItems: true },
+          });
+
+          if (pedido) {
+            // Devolver el stock de los productos
+            await Promise.all(
+              pedido.tbItems.map((item: any) =>
+                db.tbProductos.update({
+                  where: { intProducto: item.intProducto },
+                  data: {
+                    intStock: {
+                      increment: item.intCantidad,
+                    },
+                  },
+                })
+              )
+            );
+
+            // Cancelar el pedido
+            await db.tbPedidos.update({
+              where: { intPedido: pagoActualizado.intPedido },
+              data: { strEstado: "CANCELADO" },
+            });
+
+            console.log('⚠️ Pedido cancelado y stock devuelto');
+          }
+        }
+
+        console.log('✅ Pago actualizado:', pagoActualizado.intPago);
+        return pagoActualizado;
+      } catch (error: any) {
+        console.error('❌ Error al actualizar pago:', error);
+        throw new Error(error.message || "No se pudo actualizar el pago");
+      }
+    },
+
+
+    // MUTATION: Crear tarjeta
+    crearTarjeta:async(_: any, { data }: any) => {
+          try {
+            // Verificar que el cliente existe
+            const cliente = await db.tbClientes.findUnique({
+              where: { intCliente: data.intCliente },
+            });
+
+            if (!cliente) {
+              throw new Error("Cliente no encontrado");
+            }
+
+            // Verificar que solo guarda últimos 4 dígitos (seguridad)
+            if (data.strNumeroTarjeta.length > 4) {
+              throw new Error("Solo se deben guardar los últimos 4 dígitos de la tarjeta");
+            }
+
+            // Crear la tarjeta
+            const nuevaTarjeta = await db.tbTarjetas.create({
+              data: {
+                intCliente: data.intCliente,
+                strNumeroTarjeta: data.strNumeroTarjeta,
+                strNombreTarjeta: data.strNombreTarjeta,
+                strTipoTarjeta: data.strTipoTarjeta,
+                strFechaExpiracion: data.strFechaExpiracion,
+              },
+            });
+
+            return nuevaTarjeta;
+          } catch (error) {
+            console.error("Error al crear tarjeta:", error);
+            throw error;
+          }
+        },
+
+        // MUTATION: Eliminar tarjeta
+        eliminarTarjeta:async(_: any,{ intTarjeta }: { intTarjeta: number }) => {
+          try {
+            await db.tbTarjetas.delete({
+              where: { intTarjeta },
+            });
+
+            return true;
+          } catch (error) {
+            console.error("Error al eliminar tarjeta:", error);
+            throw new Error("Error al eliminar la tarjeta");
+          }
+        },
 
 
    login: async (_: any, { data }: any) => {

@@ -24,8 +24,9 @@ model tbClientes {
   datRegistro DateTime @default(now())
 
   // Relaciones
-  tbPedidos     tbPedidos[]
   tbDirecciones tbDirecciones[]
+  tbPedidos     tbPedidos[]
+  tbTarjetas    tbTarjetas[]    // ✨ NUEVO
 }
 
 model tbEmpleados {
@@ -126,14 +127,20 @@ model tbProductos {
 model tbPedidos {
   intPedido        Int          @id @default(autoincrement())
   intCliente       Int
+  intDireccion     Int?         // ✨ NUEVO: Relación con dirección de envío
   dblTotal         Float        @default(0)
+  dblSubtotal      Float        @default(0)  // ✨ NUEVO: Subtotal sin envío
+  dblCostoEnvio    Float        @default(0)  // ✨ NUEVO: Costo del envío
   strEstado        EstadoPedido @default(PENDIENTE)
+  strMetodoEnvio   String?      // ✨ NUEVO: express, estandar, recoger
+  strNotasEnvio    String?      // ✨ NUEVO: Notas adicionales de envío
   datPedido        DateTime     @default(now())
   datActualizacion DateTime     @updatedAt
 
-  tbCliente tbClientes       @relation(fields: [intCliente], references: [intCliente])
-  tbItems   tbPedidosItems[]
-  tbPago           tbPagos?         // Relación con pagos
+  tbClientes   tbClientes       @relation(fields: [intCliente], references: [intCliente])
+  tbDirecciones tbDirecciones?   @relation(fields: [intDireccion], references: [intDireccion]) // ✨ NUEVO
+  tbItems     tbPedidosItems[]
+  tbPagos      tbPagos?
 }
 
 model tbPedidosItems {
@@ -188,15 +195,22 @@ enum EstadoPago {
 // ======================================================
 
 model tbDirecciones {
-  intDireccion Int    @id @default(autoincrement())
-  intCliente   Int
-  strCalle     String
-  strCiudad    String
-  strEstado    String
-  strCP        String
-  strPais      String @default("México")
+  intDireccion      Int      @id @default(autoincrement())
+  intCliente        Int
+  strCalle          String
+  strNumeroExterior String
+  strNumeroInterior String?
+  strColonia        String
+  strCP             String
+  strCiudad         String
+  strEstado         String
+  strPais           String   @default("México")
+  strReferencias    String?
+  datCreacion       DateTime @default(now())
+  datActualizacion  DateTime @updatedAt
 
-  tbCliente tbClientes @relation(fields: [intCliente], references: [intCliente])
+  tbCliente tbClientes  @relation(fields: [intCliente], references: [intCliente])
+  tbPedidos tbPedidos[] // ✨ NUEVO: Relación inversa
 }
 
 model tbDescuentosCodigos {
@@ -206,4 +220,20 @@ model tbDescuentosCodigos {
   datFechaInicio     DateTime
   datFechaFin        DateTime
   bolActivo          Boolean @default(true)
+}
+
+
+model tbTarjetas {
+  intTarjeta         Int      @id @default(autoincrement())
+  intCliente         Int
+  strNumeroTarjeta   String   // Solo últimos 4 dígitos
+  strNombreTarjeta   String
+  strTipoTarjeta     String   // visa, mastercard, amex
+  strFechaExpiracion String   // MM/YY
+  datCreacion        DateTime @default(now())
+  datActualizacion   DateTime @updatedAt
+
+  tbCliente tbClientes @relation(fields: [intCliente], references: [intCliente])
+
+  @@index([intCliente])
 }
