@@ -237,6 +237,7 @@ model tbTarjetas {
   strNombreTarjeta   String
   strTipoTarjeta     String   // visa, mastercard, amex
   strFechaExpiracion String   // MM/YY
+  strTokenMercadoPago String? // ✨ Token de MercadoPago para reutilizar
   datCreacion        DateTime @default(now())
   datActualizacion   DateTime @updatedAt
 

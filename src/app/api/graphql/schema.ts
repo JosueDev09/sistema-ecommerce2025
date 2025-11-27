@@ -201,6 +201,7 @@ export const typeDefs = gql`
     strNombreTarjeta: String!
     strTipoTarjeta: String!
     strFechaExpiracion: String!
+    strTokenMercadoPago: String  # ✨ Token reutilizable
     datCreacion: String!
   }
 
@@ -209,6 +210,7 @@ export const typeDefs = gql`
     strPreferenciaId: String!
     strInitPoint: String!
     strEstado: String!
+    bolEmailEnviado: Boolean
   }
 
   type PagoEstado {
@@ -363,6 +365,7 @@ export const typeDefs = gql`
     strNombreTarjeta: String!
     strTipoTarjeta: String!     # visa, mastercard, amex
     strFechaExpiracion: String! # MM/YY
+    strTokenMercadoPago: String # ✨ Token generado por MercadoPago
   }
 
   input DireccionInput {
@@ -390,6 +393,7 @@ export const typeDefs = gql`
     intPedido: Int!
     intCliente: Int!
     intDireccion: Int
+    strTokenTarjeta: String
     formData: FormDataInput!
     montos: MontosInput!
     items: [ItemMercadoPagoInput!]!
@@ -424,7 +428,9 @@ export const typeDefs = gql`
     # Campos adicionales para CVV y tarjetas guardadas
     strCVV: String
     bolUsandoTarjetaGuardada: Boolean
+    intTarjetaGuardada: Int              # ✨ ID de la tarjeta guardada a usar
     strNumeroTarjetaUltimos4: String
+    strTokenTarjeta: String  # Token generado por MercadoPago.js en el frontend
   }
 
 
@@ -456,12 +462,6 @@ export const typeDefs = gql`
 
   input PhoneInput {
     strNumero: String!
-  }
-
-  input DireccionInput {
-    strCodigoPostal: String
-    strCalle: String
-    strNumero: String
   }
 
  input EnvioInput {
