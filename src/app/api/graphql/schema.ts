@@ -204,6 +204,30 @@ export const typeDefs = gql`
     datCreacion: String!
   }
 
+  type PagoMercadoPago {
+    intPago: Int!
+    strPreferenciaId: String!
+    strInitPoint: String!
+    strEstado: String!
+  }
+
+  type PagoEstado {
+    intPago: Int!
+    intPedido: Int!
+    dblMonto: Float!
+    strEstado: String!
+    strMercadoPagoId: String
+    datCreacion: String!
+    tbPedido: Pedido!
+  }
+
+  type Pedido {
+    intPedido: Int!
+    dblTotal: Float!
+    strEstado: String!
+    strMetodoEnvio: String
+  }
+
 
   # ======================================================
   #  INPUTS (para Mutations)
@@ -344,9 +368,9 @@ export const typeDefs = gql`
   input DireccionInput {
     intCliente: Int!
     strCalle: String!
-    strNumeroExterior: String!
+    strNumeroExterior: String
     strNumeroInterior: String
-    strColonia: String!
+    strColonia: String
     strCiudad: String!
     strEstado: String!
     strCP: String!
@@ -361,6 +385,109 @@ export const typeDefs = gql`
     intCuotas: Int
     jsonDetallesPago: String
   }
+
+  input PreferenciaMercadoPagoInput {
+    intPedido: Int!
+    intCliente: Int!
+    intDireccion: Int
+    formData: FormDataInput!
+    montos: MontosInput!
+    items: [ItemMercadoPagoInput!]!
+    payer: PayerInput!
+    shipments: ShipmentsInput
+    metadata: String
+  }
+  input FormDataInput {
+    strNombre: String!
+    strApellido: String
+    strEmail: String!
+    strTelefono: String!
+
+    strCalle: String
+    strNumeroExterior: String
+    strNumeroInterior: String
+    strColonia: String
+    strCiudad: String
+    strEstado: String
+    strCodigoPostal: String
+    strReferencias: String
+
+    strMetodoEnvio: String!
+    strMetodoPago: String!
+
+    strNumeroTarjeta: String
+    strNombreTarjeta: String
+    strTipoTarjeta: String
+    strFechaExpiracion: String
+    intMesesSinIntereses: Int
+    
+    # Campos adicionales para CVV y tarjetas guardadas
+    strCVV: String
+    bolUsandoTarjetaGuardada: Boolean
+    strNumeroTarjetaUltimos4: String
+  }
+
+
+  input MontosInput {
+    dblSubtotal: Float!
+    dblCostoEnvio: Float!
+    dblTotal: Float!
+  }
+
+
+  input ItemMercadoPagoInput {
+    strId: String!
+    strTitulo: String!
+    strDescripcion: String
+    strImagenURL: String
+    strCategoriaId: String
+    intCantidad: Int!
+    dblPrecioUnitario: Float!
+  }
+
+
+  input PayerInput {
+    strNombre: String!
+    strApellido: String
+    strEmail: String!
+    objTelefono: PhoneInput!
+    objDireccion: DireccionInput
+  }
+
+  input PhoneInput {
+    strNumero: String!
+  }
+
+  input DireccionInput {
+    strCodigoPostal: String
+    strCalle: String
+    strNumero: String
+  }
+
+ input EnvioInput {
+    dblCosto: Float!
+    strModo: String!
+    objDireccionReceptor: DireccionReceptorInput!
+  }
+
+  input ShipmentsInput {
+    cost: Float
+    mode: String
+    receiver_address: DireccionReceptorInput
+  }
+
+
+  input DireccionReceptorInput {
+    strCodigoPostal: String!
+    strCalle: String!
+    strNumero: String!
+    strPiso: String
+    strDepartamento: String
+    strCiudad: String
+    strEstado: String
+    strPais: String
+  }
+
 
   # ======================================================
   #  QUERIES
@@ -399,6 +526,9 @@ export const typeDefs = gql`
 
     # Tarjetas
     obtenerTarjetasCliente(intCliente: Int!): [Tarjeta!]!
+
+    # Mercado Pago
+    obtenerEstadoPago(strPreferenciaId: String!): PagoEstado!
 
   }
 
@@ -444,5 +574,9 @@ export const typeDefs = gql`
     # Tarjetas
     crearTarjeta(data: TarjetaInput!): Tarjeta!
     eliminarTarjeta(intTarjeta: Int!): Boolean!
+
+    # Mercado Pago
+    crearPreferenciaMercadoPago(data: PreferenciaMercadoPagoInput!): PagoMercadoPago!
+    actualizarEstadoPago(strMercadoPagoId: String! strEstado: String! jsonRespuesta: String!): Pago!
   }
 `;

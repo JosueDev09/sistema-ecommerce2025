@@ -2,6 +2,14 @@
 import { db } from "../../../lib/db"; // tu PrismaClient global
 import { verifyPassword, generateToken } from "./auth/utils";
 import bcrypt from "bcryptjs";
+import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
+
+// Configurar MercadoPago con la nueva API
+const client = new MercadoPagoConfig({ 
+  accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN || "" 
+});
+const preferenceClient = new Preference(client);
+const paymentClient = new Payment(client);
 
 export const resolvers = {
 
@@ -355,6 +363,7 @@ export const resolvers = {
           where: { intCliente: data.intCliente },
         });
 
+        console.log('Verificando dirección:', data);
         if (!cliente) {
           throw new Error("Cliente no encontrado");
         }
@@ -624,7 +633,7 @@ export const resolvers = {
         },
 
         // MUTATION: Eliminar tarjeta
-        eliminarTarjeta:async(_: any,{ intTarjeta }: { intTarjeta: number }) => {
+    eliminarTarjeta:async(_: any,{ intTarjeta }: { intTarjeta: number }) => {
           try {
             await db.tbTarjetas.delete({
               where: { intTarjeta },
@@ -636,6 +645,8 @@ export const resolvers = {
             throw new Error("Error al eliminar la tarjeta");
           }
         },
+
+      
 
 
    login: async (_: any, { data }: any) => {
@@ -676,6 +687,204 @@ export const resolvers = {
     token,
     usuario: usuario, // Retornar el objeto original completo
   };
+    },
+
+    // ======================================================
+    //  MERCADO PAGO - CREAR PREFERENCIA
+    // ======================================================
+    crearPreferenciaMercadoPago: async (_: any, { data }: any) => {
+      try {
+        console.log("🔵 Creando preferencia de MercadoPago...");
+        console.log("📦 Pedido ID:", data.intPedido);
+        console.log("👤 Cliente ID:", data.intCliente);
+        console.log("💰 Total:", data.montos.total);
+
+        // Validar que el pedido existe
+        const pedido = await db.tbPedidos.findUnique({
+          where: { intPedido: data.intPedido },
+          include: {
+            tbClientes: true,
+            tbDirecciones: true,
+          },
+        });
+
+        if (!pedido) {
+          throw new Error("Pedido no encontrado");
+        }
+
+        // Construir la preferencia de MercadoPago
+        const preferenceData: any = {
+          items: data.items.map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            description: item.description || item.title,
+            picture_url: item.picture_url,
+            category_id: item.category_id || "others",
+            quantity: item.quantity,
+            currency_id: "MXN",
+            unit_price: parseFloat(item.unit_price),
+          })),
+
+          payer: {
+            name: data.payer.name,
+            surname: data.payer.surname || "",
+            email: data.payer.email,
+            phone: {
+              area_code: "52",
+              number: data.payer.phone.number,
+            },
+            address: data.payer.address
+              ? {
+                  zip_code: data.payer.address.zip_code,
+                  street_name: data.payer.address.street_name,
+                  street_number: parseInt(data.payer.address.street_number),
+                }
+              : undefined,
+          },
+
+          // URLs de retorno
+          back_urls: {
+            success: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/checkout/success`,
+            failure: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/checkout/failure`,
+            pending: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/checkout/pending`,
+          },
+
+          // URL de notificación (webhook)
+          notification_url: `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/webhook/mercadopago`,
+
+          // Configuración adicional
+          auto_return: "approved",
+          binary_mode: false,
+          statement_descriptor: "ESYMBEL STORE",
+
+          // Referencia externa
+          external_reference: data.intPedido.toString(),
+
+          // Metadata
+          metadata: {
+            pedido_id: data.intPedido,
+            cliente_id: data.intCliente,
+            ...data.metadata,
+          },
+
+          // Configuración de cuotas (MSI)
+          payment_methods: {
+            installments: data.metadata?.meses_sin_intereses || 12,
+            default_installments: parseInt(data.formData.mesesSinIntereses || "1"),
+          },
+        };
+
+        // Agregar envío si existe
+        if (data.shipments) {
+          preferenceData.shipments = {
+            cost: parseFloat(data.shipments.cost),
+            mode: data.shipments.mode,
+            receiver_address: {
+              zip_code: data.shipments.receiver_address.zip_code,
+              street_name: data.shipments.receiver_address.street_name,
+              street_number: parseInt(data.shipments.receiver_address.street_number),
+              floor: data.shipments.receiver_address.floor || "",
+              apartment: data.shipments.receiver_address.apartment || "",
+              city_name: data.shipments.receiver_address.city_name,
+              state_name: data.shipments.receiver_address.state_name,
+              country_name: data.shipments.receiver_address.country_name || "México",
+            },
+          };
+        }
+
+        // Crear la preferencia en MercadoPago
+        const mpResponse = await preferenceClient.create({ body: preferenceData });
+
+        console.log("✅ Preferencia creada:", mpResponse.id);
+
+        // Guardar el pago en la base de datos
+        const nuevoPago = await db.tbPagos.create({
+          data: {
+            intPedido: data.intPedido,
+            strMetodoPago: data.formData.metodoPago,
+            dblMonto: data.montos.total,
+            strEstado: "PENDIENTE",
+            strPreferenciaId: mpResponse.id,
+            intCuotas: parseInt(data.formData.mesesSinIntereses || "1"),
+            jsonDetallesPago: JSON.stringify({
+              subtotal: data.montos.subtotal,
+              costoEnvio: data.montos.costoEnvio,
+              metodoEnvio: data.formData.metodoEnvio,
+              numeroTarjetaUltimos4: data.formData.numeroTarjetaUltimos4,
+              nombreTarjeta: data.formData.nombreTarjeta,
+              tipoTarjeta: data.formData.tipoTarjeta,
+            }),
+            jsonRespuestaMercadoPago: JSON.stringify(mpResponse),
+          },
+        });
+
+        // Actualizar estado del pedido
+        await db.tbPedidos.update({
+          where: { intPedido: data.intPedido },
+          data: {
+            strEstado: "EN_PROCESO",
+          },
+        });
+
+        console.log("💾 Pago guardado en BD:", nuevoPago.intPago);
+
+        return {
+          intPago: nuevoPago.intPago,
+          strPreferenciaId: mpResponse.id || "",
+          strInitPoint: mpResponse.init_point || "",
+          strEstado: nuevoPago.strEstado,
+        };
+      } catch (error: any) {
+        console.error("❌ Error al crear preferencia:", error);
+        throw new Error(`Error al procesar el pago: ${error.message}`);
+      }
+    },
+
+    // ======================================================
+    //  MERCADO PAGO - ACTUALIZAR ESTADO DE PAGO
+    // ======================================================
+    actualizarEstadoPago: async (_: any, { strMercadoPagoId, strEstado, jsonRespuesta }: any) => {
+      try {
+        console.log("🔔 Actualizando estado de pago:", strMercadoPagoId);
+
+        const pago = await db.tbPagos.findFirst({
+          where: { strMercadoPagoId },
+          include: { tbPedido: true },
+        });
+
+        if (!pago) {
+          throw new Error("Pago no encontrado");
+        }
+
+        // Actualizar pago
+        const pagoActualizado = await db.tbPagos.update({
+          where: { intPago: pago.intPago },
+          data: {
+            strEstado,
+            jsonRespuestaMercadoPago: jsonRespuesta,
+          },
+        });
+
+        // Actualizar estado del pedido según el estado del pago
+        let estadoPedido: any = "EN_PROCESO";
+        if (strEstado === "APROBADO" || strEstado === "approved") {
+          estadoPedido = "PAGADO";
+        } else if (strEstado === "RECHAZADO" || strEstado === "rejected") {
+          estadoPedido = "CANCELADO";
+        }
+
+        await db.tbPedidos.update({
+          where: { intPedido: pago.intPedido },
+          data: { strEstado: estadoPedido as any },
+        });
+
+        console.log("✅ Estado actualizado:", strEstado);
+
+        return pagoActualizado;
+      } catch (error: any) {
+        console.error("❌ Error al actualizar estado:", error);
+        throw error;
+      }
     },
  
   },

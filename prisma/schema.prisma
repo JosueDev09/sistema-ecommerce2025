@@ -123,7 +123,6 @@ model tbProductos {
 // ======================================================
 //  PEDIDOS Y DETALLES
 // ======================================================
-
 model tbPedidos {
   intPedido        Int          @id @default(autoincrement())
   intCliente       Int
@@ -141,6 +140,9 @@ model tbPedidos {
   tbDirecciones tbDirecciones?   @relation(fields: [intDireccion], references: [intDireccion]) // ✨ NUEVO
   tbItems     tbPedidosItems[]
   tbPagos      tbPagos?
+
+  @@index([intCliente])
+  @@index([strEstado])
 }
 
 model tbPedidosItems {
@@ -149,7 +151,7 @@ model tbPedidosItems {
   intProducto   Int
   intCantidad   Int   @default(1)
   dblSubtotal   Float @default(0)
-
+  dblPrecioUnitario Float @default(0)
   tbPedido   tbPedidos   @relation(fields: [intPedido], references: [intPedido])
   tbProducto tbProductos @relation(fields: [intProducto], references: [intProducto])
 }
@@ -168,20 +170,25 @@ enum EstadoPedido {
 // ======================================================
 
 model tbPagos {
-  intPago                 Int      @id @default(autoincrement())
-  intPedido               Int      @unique
-  strMercadoPagoId        String   @unique  // ID de pago de MP
-  strMetodoPago           String   // tarjeta, efectivo, transferencia
-  strEstado               EstadoPago @default(PENDIENTE)
-  dblMonto                Float
-  intCuotas               Int?     // Para meses sin intereses
-  jsonDetallesPago        String?  // JSON con detalles adicionales
-  datCreacion             DateTime @default(now())
-  datActualizacion        DateTime @updatedAt
-  
-  tbPedido                tbPedidos @relation(fields: [intPedido], references: [intPedido])
-}
+  intPago              Int      @id @default(autoincrement())
+  intPedido            Int      @unique
+  strMetodoPago        String   // tarjeta, paypal, efectivo
+  dblMonto             Float
+  strEstado            String   @default("PENDIENTE") // PENDIENTE, APROBADO, RECHAZADO
+  strMercadoPagoId     String?  // ID del pago en MercadoPago
+  strPreferenciaId     String?  // ID de la preferencia creada
+  intCuotas            Int?     // Meses sin intereses
+  jsonDetallesPago     String?  // JSON con detalles adicionales
+  jsonRespuestaMercadoPago String? // Respuesta completa de MP
+  datCreacion          DateTime @default(now())
+  datActualizacion     DateTime @updatedAt
 
+  tbPedido tbPedidos @relation(fields: [intPedido], references: [intPedido])
+
+  @@index([intPedido])
+  @@index([strMercadoPagoId])
+  @@index([strPreferenciaId])
+}
 enum EstadoPago {
   PENDIENTE
   APROBADO
