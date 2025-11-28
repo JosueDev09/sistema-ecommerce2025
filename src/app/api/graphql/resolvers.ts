@@ -79,6 +79,20 @@ export const resolvers = {
     },
     obtenerPedidos: async () => {
       return await db.tbPedidos.findMany();
+    },  
+    obtenerPedido: async (_: any, { intPedido }: any) => {
+      return await db.tbPedidos.findUnique({
+        where: { intPedido },
+        include: {
+          tbClientes: true,
+          tbDirecciones: true,  // ✨ Agregar dirección
+          tbItems: {
+            include: {
+              tbProducto: true
+            }
+          }
+        }
+      });
     },
     obtenerProducto: async (_: any, { strNombre }: any) => {
          // console.log("🔍 Buscando producto con slug:", strNombre);
@@ -134,7 +148,7 @@ export const resolvers = {
         console.error("Error al obtener dirección:", error);
         throw new Error("Error al cargar la dirección del cliente");
       }
-  },
+    },
 
    
 
@@ -1107,7 +1121,7 @@ export const resolvers = {
         // Crear la preferencia en MercadoPago
         const mpResponse = await preferenceClient.create({ body: preferenceData });
 
-        console.log("✅ Preferencia creada:", mpResponse.id);
+      //  console.log("✅ Preferencia creada:", mpResponse.id);
 
         // Guardar el pago en la base de datos
         const nuevoPago = await db.tbPagos.create({
@@ -1138,7 +1152,7 @@ export const resolvers = {
           },
         });
 
-        console.log("💾 Pago guardado en BD:", nuevoPago.intPago);
+        //console.log("💾 Pago guardado en BD:", nuevoPago.intPago);
 
         // 📧 ENVIAR EMAILS DE CONFIRMACIÓN (solo para preferencias, no se puede saber si se pagará)
         // Los emails se envían mejor cuando el pago se apruebe via webhook o al retornar del checkout

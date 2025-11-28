@@ -138,21 +138,22 @@ export const typeDefs = gql`
     intCantidad: Int!
     dblSubtotal: Float!
     tbProducto: Producto!
+    jsonImagenes: String
   }
 
   type Pedido {
     intPedido: Int!
     intCliente: Int!
     intDireccion: Int
-    dblSubtotal: Float!      # ✨ NUEVO
-    dblCostoEnvio: Float!    # ✨ NUEVO
+    dblSubtotal: Float!
+    dblCostoEnvio: Float!
     dblTotal: Float!
     strEstado: String!
-    strMetodoEnvio: String   # ✨ NUEVO
-    strNotasEnvio: String    # ✨ NUEVO
+    strMetodoEnvio: String
+    strNotasEnvio: String
     datPedido: String!
-    tbCliente: Cliente!
-    tbDireccion: Direccion   # ✨ NUEVO
+    tbCliente: Cliente      # ✨ Permitir null temporalmente
+    tbDireccion: Direccion
     tbItems: [PedidoItem!]!
     tbPago: Pago
 }
@@ -221,13 +222,6 @@ export const typeDefs = gql`
     strMercadoPagoId: String
     datCreacion: String!
     tbPedido: Pedido!
-  }
-
-  type Pedido {
-    intPedido: Int!
-    dblTotal: Float!
-    strEstado: String!
-    strMetodoEnvio: String
   }
 
 
@@ -513,6 +507,7 @@ export const typeDefs = gql`
     # Pedidos
     obtenerPedidos: [Pedido!]!
     obtenerPedido(intPedido: Int!): Pedido
+
 
     # CodigosDescuento
     obtenerDescuentoCodigo(strCodigo: String!): DescuentoCodigo

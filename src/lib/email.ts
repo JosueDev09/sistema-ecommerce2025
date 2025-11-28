@@ -22,88 +22,178 @@ transporter.verify((error: any, success: any) => {
 
 // Template de email para el cliente
 function templateEmailCliente(pedido: any) {
+  const fechaPedido = new Date(pedido.datPedido).toLocaleDateString('es-MX', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
   return `
     <!DOCTYPE html>
-    <html>
+    <html lang="es">
     <head>
+      <meta charset="utf-8"/>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+      <title>Confirmación de Pedido</title>
       <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
-        .container { max-width: 600px; margin: 0 auto; background: white; }
-        .header { background: #3A6EA5; color: white; padding: 30px 20px; text-align: center; }
-        .header h1 { margin: 0; font-size: 28px; }
-        .content { padding: 30px 20px; }
-        .order-info { background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; }
-        .order-info h2 { margin-top: 0; color: #3A6EA5; }
-        .items { margin: 20px 0; }
-        .item { padding: 10px 0; border-bottom: 1px solid #eee; }
-        .item:last-child { border-bottom: none; }
-        .total { font-size: 24px; font-weight: bold; color: #3A6EA5; text-align: right; margin-top: 20px; }
-        .button { 
-          display: inline-block; 
-          padding: 15px 30px; 
-          background: #3A6EA5; 
-          color: white; 
-          text-decoration: none; 
-          border-radius: 5px; 
-          margin: 20px 0;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #f6f6f8; }
+        .container { max-width: 960px; margin: 0 auto; padding: 20px; }
+        .card { background: white; border-radius: 12px; border: 1px solid #e5e7eb; padding: 40px; margin: 20px 0; }
+        .header { text-align: center; padding: 24px 16px; }
+        .logo { display: inline-flex; align-items: center; gap: 12px; }
+        .logo-icon { width: 36px; height: 36px; background: #10b981; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; color: white; font-size: 20px; }
+        .logo-text { font-size: 20px; font-weight: bold; color: #111318; }
+        h1 { font-size: 32px; font-weight: bold; color: #111318; margin: 24px 16px 12px; }
+        .subtitle { color: #636f88; font-size: 16px; line-height: 1.5; padding: 4px 16px 12px; }
+        .success-badge { display: inline-block; background: #d1fae5; color: #065f46; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; margin: 16px; }
+        .button { display: inline-block; background: #10b981; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 16px 16px 32px; }
+        .button:hover { background: #059669; }
+        .section-title { font-size: 18px; font-weight: bold; color: #111318; padding: 16px 16px 8px; }
+        .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); padding: 16px; }
+        .info-item { padding: 16px 8px; border-top: 1px solid #dcdfe5; }
+        .info-label { color: #636f88; font-size: 14px; margin-bottom: 4px; }
+        .info-value { color: #111318; font-size: 14px; font-weight: bold; }
+        .info-value-normal { color: #111318; font-size: 14px; }
+        .items-container { padding: 12px 16px; }
+        .item-row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; align-items: center; padding: 16px 0; border-bottom: 1px solid #f3f4f6; }
+        .item-row:last-child { border-bottom: none; }
+        .item-info { display: flex; gap: 16px; align-items: center; }
+        .item-image { width: 64px; height: 64px; border-radius: 8px; object-fit: cover; background: #f3f4f6; }
+        .item-name { font-weight: 600; color: #111318; font-size: 14px; }
+        .item-sku { color: #636f88; font-size: 12px; margin-top: 4px; }
+        .item-quantity { text-align: center; color: #111318; font-size: 14px; }
+        .item-price { text-align: right; color: #111318; font-size: 14px; font-weight: 500; }
+        .totals { margin: 32px 16px 0; max-width: 400px; margin-left: auto; }
+        .total-row { display: flex; justify-content: space-between; padding: 12px 0; }
+        .total-label { color: #636f88; font-size: 14px; }
+        .total-value { color: #111318; font-size: 14px; }
+        .total-final { border-top: 1px solid #dcdfe5; margin-top: 8px; padding-top: 12px; }
+        .total-final .total-label { color: #111318; font-size: 16px; font-weight: bold; }
+        .total-final .total-value { color: #111318; font-size: 18px; font-weight: bold; }
+        .info-box { background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 16px; margin: 24px 16px; }
+        .footer { text-align: center; padding: 16px; color: #636f88; font-size: 12px; }
+        .footer a { color: #10b981; text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
+        @media (max-width: 640px) {
+          .card { padding: 24px; }
+          .info-grid { grid-template-columns: 1fr; }
+          .item-row { grid-template-columns: 1fr; gap: 8px; }
+          .item-quantity, .item-price { text-align: left; }
         }
-        .footer { background: #f5f5f5; padding: 20px; text-align: center; color: #666; font-size: 12px; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <h1>¡Gracias por tu compra!</h1>
-          <p style="margin: 10px 0 0 0; font-size: 16px;">Tu pedido ha sido confirmado</p>
+          <div class="logo">
+            <div class="logo-icon">✓</div>
+            <span class="logo-text">ESYMBEL STORE</span>
+          </div>
         </div>
-        
-        <div class="content">
-          <div class="order-info">
-            <h2>Pedido #${pedido.intPedido}</h2>
-            <p><strong>Cliente:</strong> ${pedido.tbClientes.strNombre}</p>
-            <p><strong>Email:</strong> ${pedido.tbClientes.strEmail}</p>
-            <p><strong>Fecha:</strong> ${new Date(pedido.datPedido).toLocaleDateString('es-MX', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })}</p>
-            ${pedido.strMetodoEnvio ? `<p><strong>Método de Envío:</strong> ${pedido.strMetodoEnvio}</p>` : ''}
-          </div>
 
-          <h3>Resumen del Pedido:</h3>
-          <div class="items">
-            ${pedido.tbItems.map((item: any) => `
-              <div class="item">
-                <strong>${item.tbProducto.strNombre}</strong><br>
-                Cantidad: ${item.intCantidad} x $${item.dblPrecioUnitario.toFixed(2)} = $${item.dblSubtotal.toFixed(2)} MXN
-              </div>
-            `).join('')}
-          </div>
-
-          <div style="border-top: 2px solid #3A6EA5; padding-top: 20px; margin-top: 20px;">
-            ${pedido.dblSubtotal ? `<p style="text-align: right;"><strong>Subtotal:</strong> $${pedido.dblSubtotal.toFixed(2)} MXN</p>` : ''}
-            ${pedido.dblCostoEnvio ? `<p style="text-align: right;"><strong>Envío:</strong> $${pedido.dblCostoEnvio.toFixed(2)} MXN</p>` : ''}
-            <p class="total">Total: $${pedido.dblTotal.toFixed(2)} MXN</p>
-          </div>
-
+        <div class="card">
           <div style="text-align: center;">
-            <a href="${process.env.FRONTEND_URL}/pedidos/${pedido.intPedido}" class="button">
+            <span class="success-badge">✓ Pedido Confirmado</span>
+          </div>
+          
+          <h1>¡Gracias por tu compra, ${pedido.tbClientes?.strNombre?.split(' ')[0] || 'Cliente'}!</h1>
+          <p class="subtitle">
+            Tu pedido ha sido confirmado y está siendo procesado. Te enviaremos una notificación cuando esté en camino.
+          </p>
+
+          <div style="padding: 12px 16px;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:3001'}/pedidos/${pedido.intPedido}" class="button">
               Ver Detalles del Pedido
             </a>
           </div>
 
-          <p style="color: #666; font-size: 14px; margin-top: 30px;">
-            Recibirás otra notificación cuando tu pedido sea enviado. 
-            Puedes seguir el estado de tu pedido en cualquier momento desde tu cuenta.
-          </p>
+          <h3 class="section-title">Información del Pedido</h3>
+          
+          <div class="info-grid">
+            <div class="info-item">
+              <p class="info-label">Número de Pedido</p>
+              <p class="info-value">#${pedido.intPedido}</p>
+            </div>
+            <div class="info-item">
+              <p class="info-label">Fecha</p>
+              <p class="info-value-normal">${fechaPedido}</p>
+            </div>
+            <div class="info-item">
+              <p class="info-label">Estado</p>
+              <p class="info-value">${pedido.strEstado}</p>
+            </div>
+            <div class="info-item">
+              <p class="info-label">Método de Envío</p>
+              <p class="info-value-normal">${pedido.strMetodoEnvio === 'express' ? 'Envío Express' : pedido.strMetodoEnvio === 'estandar' ? 'Envío Estándar' : 'Recoger en Tienda'}</p>
+            </div>
+            ${pedido.tbDirecciones ? `
+              <div class="info-item" style="grid-column: 1 / -1;">
+                <p class="info-label">Dirección de Envío</p>
+                <p class="info-value-normal">
+                  ${pedido.tbDirecciones.strCalle} ${pedido.tbDirecciones.strNumeroExterior}${pedido.tbDirecciones.strNumeroInterior ? ` Int. ${pedido.tbDirecciones.strNumeroInterior}` : ''}, 
+                  ${pedido.tbDirecciones.strColonia}, 
+                  ${pedido.tbDirecciones.strCiudad}, ${pedido.tbDirecciones.strEstado} ${pedido.tbDirecciones.strCP}
+                </p>
+              </div>
+            ` : ''}
+          </div>
+
+          <h3 class="section-title" style="margin-top: 32px;">Artículos Comprados</h3>
+
+          <div class="items-container">
+            ${pedido.tbItems.map((item: any) => `
+              <div class="item-row">
+                <div class="item-info">
+                  <img 
+                    class="item-image" 
+                    src="${item.tbProducto.strImagen || 'https://via.placeholder.com/64'}" 
+                    alt="${item.tbProducto.strNombre}"
+                    onerror="this.src='https://via.placeholder.com/64?text=Imagen'"
+                  />
+                  <div>
+                    <p class="item-name">${item.tbProducto.strNombre}</p>
+                    <p class="item-sku">SKU: ${item.tbProducto.strSKU || 'N/A'}</p>
+                  </div>
+                </div>
+                <div class="item-quantity">${item.intCantidad}</div>
+                <div class="item-price">$${item.dblSubtotal.toFixed(2)} MXN</div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="totals">
+            <div class="total-row">
+              <span class="total-label">Subtotal</span>
+              <span class="total-value">$${(pedido.dblSubtotal || 0).toFixed(2)} MXN</span>
+            </div>
+            <div class="total-row">
+              <span class="total-label">Envío</span>
+              <span class="total-value">$${(pedido.dblCostoEnvio || 0).toFixed(2)} MXN</span>
+            </div>
+            <div class="total-row total-final">
+              <span class="total-label">Total Pagado</span>
+              <span class="total-value">$${pedido.dblTotal.toFixed(2)} MXN</span>
+            </div>
+          </div>
+
+          <div class="info-box">
+            <p style="color: #166534; font-weight: 600; margin-bottom: 8px;">📦 ¿Qué sigue?</p>
+            <p style="color: #166534; font-size: 14px; line-height: 1.6;">
+              Estamos preparando tu pedido. Recibirás un correo de confirmación cuando sea enviado con el número de rastreo. 
+              Puedes seguir el estado de tu pedido en cualquier momento desde tu cuenta.
+            </p>
+          </div>
         </div>
 
         <div class="footer">
-          <p><strong>ESYMBEL STORE</strong></p>
-          <p>© ${new Date().getFullYear()} Todos los derechos reservados.</p>
-          <p>Si tienes dudas, contáctanos a soporte@esymbelstore.com</p>
+          <p>
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:3001'}/cuenta">Accede a tu cuenta</a> para ver todos tus pedidos.
+          </p>
+          <p style="margin-top: 8px;">
+            ¿Necesitas ayuda? Contáctanos en <a href="mailto:soporte@esymbelstore.com">soporte@esymbelstore.com</a>
+          </p>
+          <p style="margin-top: 12px;">© ${new Date().getFullYear()} ESYMBEL STORE. Todos los derechos reservados.</p>
         </div>
       </div>
     </body>
@@ -113,83 +203,161 @@ function templateEmailCliente(pedido: any) {
 
 // Template de email para el administrador
 function templateEmailAdmin(pedido: any) {
+  const fechaPedido = new Date(pedido.datPedido).toLocaleDateString('es-MX', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
   return `
     <!DOCTYPE html>
-    <html>
+    <html lang="es">
     <head>
+      <meta charset="utf-8"/>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+      <title>Nueva Orden Recibida</title>
       <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
-        .container { max-width: 600px; margin: 0 auto; background: white; }
-        .header { background: #dc2626; color: white; padding: 30px 20px; text-align: center; }
-        .content { padding: 30px 20px; }
-        .alert { background: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0; }
-        .info-row { padding: 10px 0; border-bottom: 1px solid #eee; }
-        .button { 
-          display: inline-block; 
-          padding: 15px 30px; 
-          background: #dc2626; 
-          color: white; 
-          text-decoration: none; 
-          border-radius: 5px; 
-          margin: 20px 0;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #f6f6f8; }
+        .container { max-width: 960px; margin: 0 auto; padding: 20px; }
+        .card { background: white; border-radius: 12px; border: 1px solid #e5e7eb; padding: 40px; margin: 20px 0; }
+        .header { text-align: center; padding: 24px 16px; }
+        .logo { display: inline-flex; align-items: center; gap: 12px; }
+        .logo-icon { width: 36px; height: 36px; background: #306ee8; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; color: white; font-size: 20px; }
+        .logo-text { font-size: 20px; font-weight: bold; color: #111318; }
+        h1 { font-size: 32px; font-weight: bold; color: #111318; margin: 24px 16px 12px; }
+        .subtitle { color: #636f88; font-size: 16px; line-height: 1.5; padding: 4px 16px 12px; }
+        .button { display: inline-block; background: #306ee8; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 16px 16px 32px; }
+        .button:hover { background: #2557c7; }
+        .section-title { font-size: 18px; font-weight: bold; color: #111318; padding: 16px 16px 8px; }
+        .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); padding: 16px; }
+        .info-item { padding: 16px 8px; border-top: 1px solid #dcdfe5; }
+        .info-label { color: #636f88; font-size: 14px; margin-bottom: 4px; }
+        .info-value { color: #111318; font-size: 14px; font-weight: bold; }
+        .info-value-normal { color: #111318; font-size: 14px; }
+        .items-container { padding: 12px 16px; }
+        .item-row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; align-items: center; padding: 16px 0; border-bottom: 1px solid #f3f4f6; }
+        .item-row:last-child { border-bottom: none; }
+        .item-info { display: flex; gap: 16px; align-items: center; }
+        .item-image { width: 64px; height: 64px; border-radius: 8px; object-fit: cover; background: #f3f4f6; }
+        .item-name { font-weight: 600; color: #111318; font-size: 14px; }
+        .item-sku { color: #636f88; font-size: 12px; margin-top: 4px; }
+        .item-quantity { text-align: center; color: #111318; font-size: 14px; }
+        .item-price { text-align: right; color: #111318; font-size: 14px; font-weight: 500; }
+        .totals { margin: 32px 16px 0; max-width: 400px; margin-left: auto; }
+        .total-row { display: flex; justify-content: space-between; padding: 12px 0; }
+        .total-label { color: #636f88; font-size: 14px; }
+        .total-value { color: #111318; font-size: 14px; }
+        .total-final { border-top: 1px solid #dcdfe5; margin-top: 8px; padding-top: 12px; }
+        .total-final .total-label { color: #111318; font-size: 16px; font-weight: bold; }
+        .total-final .total-value { color: #111318; font-size: 18px; font-weight: bold; }
+        .footer { text-align: center; padding: 16px; color: #636f88; font-size: 12px; }
+        .footer a { color: #306ee8; text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
+        @media (max-width: 640px) {
+          .card { padding: 24px; }
+          .info-grid { grid-template-columns: 1fr; }
+          .item-row { grid-template-columns: 1fr; gap: 8px; }
+          .item-quantity, .item-price { text-align: left; }
         }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <h1>🔔 Nuevo Pedido Recibido</h1>
+          <div class="logo">
+            <div class="logo-icon">🛍️</div>
+            <span class="logo-text">ESYMBEL STORE</span>
+          </div>
         </div>
-        
-        <div class="content">
-          <div class="alert">
-            <strong>⚠️ Acción Requerida:</strong> Un nuevo pedido necesita ser procesado.
-          </div>
 
-          <h2>Pedido #${pedido.intPedido}</h2>
-          
-          <div class="info-row">
-            <strong>Cliente:</strong> ${pedido.tbClientes.strNombre}
-          </div>
-          <div class="info-row">
-            <strong>Email:</strong> ${pedido.tbClientes.strEmail}
-          </div>
-          <div class="info-row">
-            <strong>Teléfono:</strong> ${pedido.tbClientes.strTelefono || 'No proporcionado'}
-          </div>
-          <div class="info-row">
-            <strong>Total:</strong> $${pedido.dblTotal.toFixed(2)} MXN
-          </div>
-          <div class="info-row">
-            <strong>Estado:</strong> ${pedido.strEstado}
-          </div>
-          <div class="info-row">
-            <strong>Método de Envío:</strong> ${pedido.strMetodoEnvio || 'Recoger en tienda'}
-          </div>
+        <div class="card">
+          <h1>¡Has recibido una nueva orden!</h1>
+          <p class="subtitle">
+            Se ha realizado un nuevo pedido en tu tienda. Revisa los detalles a continuación y prepárate para el procesamiento.
+          </p>
 
-          ${pedido.tbDirecciones ? `
-            <h3>Dirección de Envío:</h3>
-            <p>
-              ${pedido.tbDirecciones.strCalle} ${pedido.tbDirecciones.strNumeroExterior}<br>
-              ${pedido.tbDirecciones.strColonia}<br>
-              ${pedido.tbDirecciones.strCiudad}, ${pedido.tbDirecciones.strEstado}<br>
-              CP: ${pedido.tbDirecciones.strCP}
-            </p>
-          ` : ''}
-
-          <h3>Productos:</h3>
-          ${pedido.tbItems.map((item: any) => `
-            <div style="padding: 10px; background: #f9f9f9; margin: 5px 0; border-radius: 5px;">
-              <strong>${item.tbProducto.strNombre}</strong><br>
-              Cantidad: ${item.intCantidad} | Precio: $${item.dblPrecioUnitario.toFixed(2)} | Subtotal: $${item.dblSubtotal.toFixed(2)}
-            </div>
-          `).join('')}
-
-          <div style="text-align: center;">
-            <a href="${process.env.BACKEND_URL}/admin/pedidos/${pedido.intPedido}" class="button">
-              Ver en Panel de Administración
+          <div style="padding: 12px 16px;">
+            <a href="${process.env.BACKEND_URL || 'http://localhost:3000'}/admin/pedidos/${pedido.intPedido}" class="button">
+              Ver Orden Completa
             </a>
           </div>
+
+          <h3 class="section-title">Información de Orden y Cliente</h3>
+          
+          <div class="info-grid">
+            <div class="info-item">
+              <p class="info-label">Número de Orden</p>
+              <p class="info-value">#${pedido.intPedido}</p>
+            </div>
+            <div class="info-item">
+              <p class="info-label">Fecha de Orden</p>
+              <p class="info-value-normal">${fechaPedido}</p>
+            </div>
+            <div class="info-item">
+              <p class="info-label">Nombre del Cliente</p>
+              <p class="info-value">${pedido.tbClientes?.strNombre || 'Cliente'}</p>
+            </div>
+            <div class="info-item">
+              <p class="info-label">Email de Contacto</p>
+              <p class="info-value-normal">${pedido.tbClientes?.strEmail || 'No proporcionado'}</p>
+            </div>
+            ${pedido.tbDirecciones ? `
+              <div class="info-item" style="grid-column: 1 / -1;">
+                <p class="info-label">Dirección de Envío</p>
+                <p class="info-value-normal">
+                  ${pedido.tbDirecciones.strCalle} ${pedido.tbDirecciones.strNumeroExterior}${pedido.tbDirecciones.strNumeroInterior ? ` Int. ${pedido.tbDirecciones.strNumeroInterior}` : ''}, 
+                  ${pedido.tbDirecciones.strColonia}, 
+                  ${pedido.tbDirecciones.strCiudad}, ${pedido.tbDirecciones.strEstado} ${pedido.tbDirecciones.strCP}
+                </p>
+              </div>
+            ` : ''}
+          </div>
+
+          <h3 class="section-title" style="margin-top: 32px;">Artículos Comprados</h3>
+
+          <div class="items-container">
+            ${pedido.tbItems.map((item: any) => `
+              <div class="item-row">
+                <div class="item-info">
+                  <img 
+                    class="item-image" 
+                    src="${item.tbProducto.jsonImagenes || 'https://via.placeholder.com/64'}" 
+                    alt="${item.tbProducto.strNombre}"
+                    onerror="this.src='https://via.placeholder.com/64?text=Imagen'"
+                  />
+                  <div>
+                    <p class="item-name">${item.tbProducto.strNombre}</p>
+                    <p class="item-sku">SKU: ${item.tbProducto.strSKU || 'N/A'}</p>
+                  </div>
+                </div>
+                <div class="item-quantity">${item.intCantidad}</div>
+                <div class="item-price">$${item.dblSubtotal.toFixed(2)} MXN</div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="totals">
+            <div class="total-row">
+              <span class="total-label">Subtotal</span>
+              <span class="total-value">$${(pedido.dblSubtotal || 0).toFixed(2)} MXN</span>
+            </div>
+            <div class="total-row">
+              <span class="total-label">Envío</span>
+              <span class="total-value">$${(pedido.dblCostoEnvio || 0).toFixed(2)} MXN</span>
+            </div>
+            <div class="total-row total-final">
+              <span class="total-label">Total</span>
+              <span class="total-value">$${pedido.dblTotal.toFixed(2)} MXN</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <p>
+            <a href="${process.env.BACKEND_URL || 'http://localhost:3000'}/admin">Inicia sesión en tu panel</a> para gestionar tu tienda.
+          </p>
+          <p style="margin-top: 8px;">© ${new Date().getFullYear()} ESYMBEL STORE. Todos los derechos reservados.</p>
         </div>
       </div>
     </body>
@@ -249,7 +417,7 @@ export async function enviarEmailsConfirmacion(pedido: any): Promise<{
   emailCliente: boolean;
   emailAdmin: boolean;
 }> {
-  console.log('📬 Iniciando envío de emails de confirmación...');
+ // console.log('📬 Iniciando envío de emails de confirmación...');
   
   const [emailCliente, emailAdmin] = await Promise.all([
     enviarEmailCliente(pedido),
