@@ -78,7 +78,22 @@ export const resolvers = {
       return await db.tbEmpleados.findMany();
     },
     obtenerPedidos: async () => {
-      return await db.tbPedidos.findMany();
+      const pedidos = await db.tbPedidos.findMany({
+        include: {
+          tbClientes: true,
+          tbDirecciones: true,
+          tbItems: {
+            include: {
+              tbProducto: true
+            }
+          },
+          tbPagos: true
+        }
+      });
+
+      // Filtrar solo pedidos que tengan al menos un item
+      // Para evitar problemas con pedidos incompletos
+      return pedidos.filter(pedido => pedido.tbItems && pedido.tbItems.length > 0);
     },  
     obtenerPedido: async (_: any, { intPedido }: any) => {
       return await db.tbPedidos.findUnique({
@@ -566,6 +581,59 @@ export const resolvers = {
       }
     },
 
+    actualizarEstadoPedido: async (_: any, { intPedido, strEstado }: any) => {
+      try {
+        // Verificar que el pedido existe
+        const pedidoExistente = await db.tbPedidos.findUnique({
+          where: { intPedido },
+        });
+
+        if (!pedidoExistente) {
+          throw new Error("Pedido no encontrado");
+        }
+
+        // Validar estados permitidos
+        const estadosPermitidos = [
+          "PENDIENTE",
+          "PROCESANDO",
+          "EMPAQUETANDO",
+          "ENVIADO",
+          "ENTREGADO",
+          "CANCELADO"
+        ];
+
+        if (!estadosPermitidos.includes(strEstado)) {
+          throw new Error(`Estado inválido. Debe ser uno de: ${estadosPermitidos.join(", ")}`);
+        }
+
+        // Actualizar estado del pedido
+        const pedidoActualizado = await db.tbPedidos.update({
+          where: { intPedido },
+          data: {
+            strEstado,
+            datActualizacion: new Date(),
+          },
+          include: {
+            tbClientes: true,
+            tbDirecciones: true,
+            tbItems: {
+              include: {
+                tbProducto: true,
+              },
+            },
+            tbPagos: true,
+          },
+        });
+
+        console.log(`✅ Pedido #${intPedido} actualizado a estado: ${strEstado}`);
+        
+        return pedidoActualizado;
+      } catch (error) {
+        console.error("Error al actualizar estado del pedido:", error);
+        throw error;
+      }
+    },
+
     crearPago: async (_: any, { data }: any) => {
       try {
         // Verificar que el pedido existe
@@ -602,10 +670,10 @@ export const resolvers = {
           },
         });
 
-        // Actualizar el estado del pedido a EN_PROCESO
+        // Actualizar el estado del pedido a PROCESANDO
         await db.tbPedidos.update({
           where: { intPedido: data.intPedido },
-          data: { strEstado: "EN_PROCESO" },
+          data: { strEstado: "PROCESANDO" },
         });
 
         console.log('✅ Pago creado:', nuevoPago.intPago);
@@ -632,7 +700,10 @@ export const resolvers = {
         if (strEstado === "APROBADO") {
           await db.tbPedidos.update({
             where: { intPedido: pagoActualizado.intPedido },
-            data: { strEstado: "PAGADO" },
+            data: { 
+              strEstado: "PROCESANDO" as any,
+              strEstadoPago: "PAGADO" as any
+            },
           });
 
           console.log('✅ Pedido actualizado a PAGADO');
@@ -663,7 +734,10 @@ export const resolvers = {
             // Cancelar el pedido
             await db.tbPedidos.update({
               where: { intPedido: pagoActualizado.intPedido },
-              data: { strEstado: "CANCELADO" },
+              data: { 
+                strEstado: "CANCELADO" as any,
+                strEstadoPago: strEstado as any
+              },
             });
 
             console.log('⚠️ Pedido cancelado y stock devuelto');
@@ -968,11 +1042,15 @@ export const resolvers = {
           });
 
           // Actualizar estado del pedido según el resultado
-          let estadoPedido = "EN_PROCESO";
+          let estadoPedido = "PROCESANDO";
+          let estadoPago = "PENDIENTE";
+          
           if (pagoResponse.status === "approved") {
-            estadoPedido = "PAGADO";
+            estadoPedido = "PROCESANDO";  // Pago aprobado, listo para procesar
+            estadoPago = "PAGADO";  // Pago confirmado
           } else if (pagoResponse.status === "rejected") {
             estadoPedido = "CANCELADO";
+            estadoPago = "RECHAZADO";
             
             // Devolver stock si el pago fue rechazado
             await Promise.all(
@@ -991,7 +1069,10 @@ export const resolvers = {
 
           await db.tbPedidos.update({
             where: { intPedido: data.intPedido },
-            data: { strEstado: estadoPedido as any },
+            data: { 
+              strEstado: estadoPedido as any,
+              strEstadoPago: estadoPago as any
+            },
           });
 
           console.log("💾 Pago guardado en BD:", nuevoPago.intPago);
@@ -1148,7 +1229,8 @@ export const resolvers = {
         await db.tbPedidos.update({
           where: { intPedido: data.intPedido },
           data: {
-            strEstado: "EN_PROCESO",
+            strEstado: "PROCESANDO",
+            strEstadoPago: "PENDIENTE" as any,  // El pago aún está pendiente
           },
         });
 
@@ -1197,16 +1279,23 @@ export const resolvers = {
         });
 
         // Actualizar estado del pedido según el estado del pago
-        let estadoPedido: any = "EN_PROCESO";
+        let estadoPedido: any = "PROCESANDO";
+        let estadoPago: any = "PENDIENTE";
+        
         if (strEstado === "APROBADO" || strEstado === "approved") {
-          estadoPedido = "PAGADO";
+          estadoPedido = "PROCESANDO";  // Pago aprobado, listo para procesar
+          estadoPago = "PAGADO";  // Pago confirmado
         } else if (strEstado === "RECHAZADO" || strEstado === "rejected") {
           estadoPedido = "CANCELADO";
+          estadoPago = "RECHAZADO";
         }
 
         await db.tbPedidos.update({
           where: { intPedido: pago.intPedido },
-          data: { strEstado: estadoPedido as any },
+          data: { 
+            strEstado: estadoPedido as any,
+            strEstadoPago: estadoPago as any
+          },
         });
 
         console.log("✅ Estado actualizado:", strEstado);

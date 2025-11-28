@@ -1,145 +1,73 @@
+import { Search, Filter, Download, Eye, Package, Truck, CheckCircle, Clock, XCircle, User, MapPin } from 'lucide-react';
+import { usePedidos, type Pedido } from '../../hooks/usePedidos';
+import { getStatusConfig, STATUS_FILTERS, type EstadoPedido } from '../../lib/pedidosUtils';
+import { formatFecha } from '../../lib/formatFecha';
 import { useState } from 'react';
-import { Search, Filter, Download, Eye, Package, Truck, CheckCircle, Clock, XCircle, MoreVertical, Calendar, User, MapPin, DollarSign } from 'lucide-react';
 
 export default function PedidosPage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('todos');
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [showModal, setShowModal] = useState(false);
+  const {
+    loading,
+    error,
+    updatingStatus,
+    searchTerm,
+    filterStatus,
+    selectedOrder,
+    showModal,
+    filteredPedidos,
+    statusCounts,
+    setSearchTerm,
+    setFilterStatus,
+    setShowModal,
+    openOrderDetail,
+    actualizarEstadoPedido,
+  } = usePedidos();
 
-  const pedidos = [
-    {
-      id: '#3210',
-      cliente: 'Ana García',
-      email: 'ana.garcia@email.com',
-      telefono: '123-456-7890',
-      productos: [
-        { nombre: 'iPhone 14 Pro', cantidad: 1, precio: 999 },
-        { nombre: 'Funda iPhone', cantidad: 2, precio: 29 }
-      ],
-      subtotal: 1057,
-      envio: 15,
-      total: 1072,
-      estado: 'completado',
-      fecha: '2025-10-28',
-      direccion: 'Calle Principal 123, Celaya, GTO',
-      metodoPago: 'Tarjeta de crédito'
-    },
-    {
-      id: '#3209',
-      cliente: 'Carlos López',
-      email: 'carlos.lopez@email.com',
-      telefono: '123-456-7891',
-      productos: [
-        { nombre: 'MacBook Air M2', cantidad: 1, precio: 1299 }
-      ],
-      subtotal: 1299,
-      envio: 0,
-      total: 1299,
-      estado: 'procesando',
-      fecha: '2025-10-28',
-      direccion: 'Av. Juárez 456, Celaya, GTO',
-      metodoPago: 'PayPal'
-    },
-    {
-      id: '#3208',
-      cliente: 'María Rodríguez',
-      email: 'maria.r@email.com',
-      telefono: '123-456-7892',
-      productos: [
-        { nombre: 'AirPods Pro', cantidad: 1, precio: 249 },
-        { nombre: 'Cable USB-C', cantidad: 1, precio: 19 }
-      ],
-      subtotal: 268,
-      envio: 10,
-      total: 278,
-      estado: 'completado',
-      fecha: '2025-10-27',
-      direccion: 'Colonia Centro 789, Celaya, GTO',
-      metodoPago: 'Tarjeta de débito'
-    },
-    {
-      id: '#3207',
-      cliente: 'Juan Martínez',
-      email: 'juan.m@email.com',
-      telefono: '123-456-7893',
-      productos: [
-        { nombre: 'iPad Air', cantidad: 1, precio: 599 }
-      ],
-      subtotal: 599,
-      envio: 15,
-      total: 614,
-      estado: 'enviado',
-      fecha: '2025-10-27',
-      direccion: 'Fracc. Las Américas 321, Celaya, GTO',
-      metodoPago: 'Transferencia'
-    },
-    {
-      id: '#3206',
-      cliente: 'Laura Sánchez',
-      email: 'laura.s@email.com',
-      telefono: '123-456-7894',
-      productos: [
-        { nombre: 'Apple Watch Series 9', cantidad: 1, precio: 399 }
-      ],
-      subtotal: 399,
-      envio: 10,
-      total: 409,
-      estado: 'pendiente',
-      fecha: '2025-10-26',
-      direccion: 'Col. Jardines 654, Celaya, GTO',
-      metodoPago: 'Efectivo'
-    },
-    {
-      id: '#3205',
-      cliente: 'Pedro Hernández',
-      email: 'pedro.h@email.com',
-      telefono: '123-456-7895',
-      productos: [
-        { nombre: 'Magic Keyboard', cantidad: 1, precio: 349 }
-      ],
-      subtotal: 349,
-      envio: 0,
-      total: 349,
-      estado: 'cancelado',
-      fecha: '2025-10-26',
-      direccion: 'Zona Industrial 987, Celaya, GTO',
-      metodoPago: 'Tarjeta de crédito'
+  const [showEstadoModal, setShowEstadoModal] = useState(false);
+  const [nuevoEstado, setNuevoEstado] = useState<EstadoPedido | ''>('');
+
+  const handleActualizarEstado = async () => {
+    if (!selectedOrder || !nuevoEstado) return;
+    
+    const success = await actualizarEstadoPedido(selectedOrder.intPedido, nuevoEstado as EstadoPedido);
+    
+    if (success) {
+      setShowEstadoModal(false);
+      setNuevoEstado('');
+      // Mostrar mensaje de éxito (opcional)
+      alert('Estado actualizado correctamente');
+    } else {
+      alert('Error al actualizar el estado');
     }
-  ];
-
-  const getStatusConfig = (status: string) => {
-    const configs: Record<string, { label: string; color: string; bg: string; icon: any }> = {
-      completado: { label: 'Completado', color: 'text-emerald-700', bg: 'bg-emerald-100', icon: CheckCircle },
-      procesando: { label: 'Procesando', color: 'text-blue-700', bg: 'bg-blue-100', icon: Clock },
-      enviado: { label: 'Enviado', color: 'text-purple-700', bg: 'bg-purple-100', icon: Truck },
-      pendiente: { label: 'Pendiente', color: 'text-orange-700', bg: 'bg-orange-100', icon: Package },
-      cancelado: { label: 'Cancelado', color: 'text-red-700', bg: 'bg-red-100', icon: XCircle }
-    };
-    return configs[status] || configs.pendiente;
   };
 
-  const filteredPedidos = pedidos.filter(pedido => {
-    const matchesSearch = pedido.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         pedido.cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         pedido.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === 'todos' || pedido.estado === filterStatus;
-    return matchesSearch && matchesFilter;
-  });
 
-  const statusCounts = {
-    todos: pedidos.length,
-    pendiente: pedidos.filter(p => p.estado === 'pendiente').length,
-    procesando: pedidos.filter(p => p.estado === 'procesando').length,
-    enviado: pedidos.filter(p => p.estado === 'enviado').length,
-    completado: pedidos.filter(p => p.estado === 'completado').length,
-    cancelado: pedidos.filter(p => p.estado === 'cancelado').length
-  };
 
-  const openOrderDetail = (pedido: any) => {
-    setSelectedOrder(pedido);
-    setShowModal(true);
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando pedidos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 font-semibold">Error: {error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -193,25 +121,26 @@ export default function PedidosPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-          {Object.entries(statusCounts).map(([key, count]) => {
-            const config = getStatusConfig(key);
+          {STATUS_FILTERS.map(({ value, label }) => {
+            const count = statusCounts[value as keyof typeof statusCounts] || 0;
+            const config = getStatusConfig(value);
             const Icon = config.icon;
             return (
               <button
-                key={key}
-                onClick={() => setFilterStatus(key)}
+                key={value}
+                onClick={() => setFilterStatus(value)}
                 className={`p-4 rounded-lg border-2 transition-all text-left ${
-                  filterStatus === key 
+                  filterStatus === value 
                     ? 'border-blue-500 bg-blue-50' 
                     : 'border-gray-200 bg-white hover:border-gray-300'
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <Icon className={`w-5 h-5 ${filterStatus === key ? 'text-blue-600' : 'text-gray-400'}`} />
+                  <Icon className={`w-5 h-5 ${filterStatus === value ? 'text-blue-600' : 'text-gray-400'}`} />
                   <span className="text-2xl font-bold text-gray-900">{count}</span>
                 </div>
                 <p className="text-xs font-medium text-gray-600 capitalize">
-                  {key === 'todos' ? 'Todos' : config.label}
+                  {label}
                 </p>
               </button>
             );
@@ -246,25 +175,25 @@ export default function PedidosPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredPedidos.map((pedido) => {
-                  const statusConfig = getStatusConfig(pedido.estado);
+                  const statusConfig = getStatusConfig(pedido.strEstado);
                   const StatusIcon = statusConfig.icon;
                   
                   return (
-                    <tr key={pedido.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={pedido.intPedido} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-bold text-gray-900">{pedido.id}</span>
+                        <span className="text-sm font-bold text-gray-900">#{pedido.intPedido}</span>
                       </td>
                       <td className="px-6 py-4">
                         <div>
-                          <p className="text-sm font-semibold text-gray-900">{pedido.cliente}</p>
-                          <p className="text-xs text-gray-500">{pedido.email}</p>
+                          <p className="text-sm font-semibold text-gray-900">{pedido.tbClientes?.strNombre || 'Cliente no disponible'}</p>
+                          <p className="text-xs text-gray-500">{pedido.tbClientes?.strEmail || 'N/A'}</p>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-600">{pedido.fecha}</span>
+                        <span className="text-sm text-gray-600">{formatFecha(pedido.datPedido)}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-bold text-gray-900">${pedido.total.toLocaleString()}</span>
+                        <span className="text-sm font-bold text-gray-900">${pedido.dblTotal.toLocaleString()}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${statusConfig.bg} ${statusConfig.color}`}>
@@ -297,7 +226,7 @@ export default function PedidosPage() {
               <div className="sticky top-0 bg-white border-b border-gray-100 p-6 flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Detalle del Pedido</h2>
-                  <p className="text-gray-500 mt-1">{selectedOrder.id}</p>
+                  <p className="text-gray-500 mt-1">#{selectedOrder.intPedido}</p>
                 </div>
                 <button
                   onClick={() => setShowModal(false)}
@@ -311,7 +240,7 @@ export default function PedidosPage() {
                 {/* Estado */}
                 <div className="flex items-center gap-3">
                   {(() => {
-                    const config = getStatusConfig(selectedOrder.estado);
+                    const config = getStatusConfig(selectedOrder.strEstado);
                     const Icon = config.icon;
                     return (
                       <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold ${config.bg} ${config.color}`}>
@@ -321,7 +250,7 @@ export default function PedidosPage() {
                     );
                   })()}
                   <span className="text-sm text-gray-500">•</span>
-                  <span className="text-sm text-gray-600">{selectedOrder.fecha}</span>
+                  <span className="text-sm text-gray-600">{formatFecha(selectedOrder.datPedido)}</span>
                 </div>
 
                 {/* Información del Cliente */}
@@ -333,31 +262,41 @@ export default function PedidosPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                     <div>
                       <p className="text-gray-500">Nombre</p>
-                      <p className="font-semibold text-gray-900">{selectedOrder.cliente}</p>
+                      <p className="font-semibold text-gray-900">{selectedOrder.tbClientes?.strNombre || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Email</p>
-                      <p className="font-semibold text-gray-900">{selectedOrder.email}</p>
+                      <p className="font-semibold text-gray-900">{selectedOrder.tbClientes?.strEmail || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Teléfono</p>
-                      <p className="font-semibold text-gray-900">{selectedOrder.telefono}</p>
+                      <p className="font-semibold text-gray-900">{selectedOrder.tbClientes?.strTelefono || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-gray-500">Método de Pago</p>
-                      <p className="font-semibold text-gray-900">{selectedOrder.metodoPago}</p>
+                      <p className="font-semibold text-gray-900">{selectedOrder.tbPagos?.strMetodoPago || 'N/A'}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Dirección de Envío */}
-                <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                    <MapPin className="w-5 h-5 text-gray-600" />
-                    Dirección de Envío
-                  </h3>
-                  <p className="text-sm text-gray-700">{selectedOrder.direccion}</p>
-                </div>
+                {selectedOrder.tbDirecciones && (
+                  <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                      <MapPin className="w-5 h-5 text-gray-600" />
+                      Dirección de Envío
+                    </h3>
+                    <p className="text-sm text-gray-700">
+                      {selectedOrder.tbDirecciones.strCalle} {selectedOrder.tbDirecciones.strNumeroExterior}
+                      {selectedOrder.tbDirecciones.strNumeroInterior && ` Int. ${selectedOrder.tbDirecciones.strNumeroInterior}`}, {selectedOrder.tbDirecciones.strColonia}, {selectedOrder.tbDirecciones.strCiudad}, {selectedOrder.tbDirecciones.strEstado}, CP {selectedOrder.tbDirecciones.strCP}
+                    </p>
+                    {selectedOrder.tbDirecciones.strReferencias && (
+                      <p className="text-xs text-gray-600 mt-2">
+                        <span className="font-semibold">Referencias:</span> {selectedOrder.tbDirecciones.strReferencias}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* Productos */}
                 <div>
@@ -366,15 +305,26 @@ export default function PedidosPage() {
                     Productos
                   </h3>
                   <div className="space-y-3">
-                    {selectedOrder.productos.map((producto: any, index: number) => (
-                      <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-semibold text-gray-900">{producto.nombre}</p>
-                          <p className="text-sm text-gray-500">Cantidad: {producto.cantidad}</p>
+                    {selectedOrder.tbItems && selectedOrder.tbItems.length > 0 ? (
+                      selectedOrder.tbItems.map((item, index) => (
+                        <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                          <div className="flex-1">
+                            <p className="font-semibold text-gray-900">{item.tbProducto.strNombre}</p>
+                            <p className="text-sm text-gray-500">
+                              Cantidad: {item.intCantidad} × ${item.tbProducto.dblPrecio.toLocaleString()}
+                            </p>
+                            {item.tbProducto.strSKU && (
+                              <p className="text-xs text-gray-400">SKU: {item.tbProducto.strSKU}</p>
+                            )}
+                          </div>
+                          <p className="font-bold text-gray-900">${item.dblSubtotal.toLocaleString()}</p>
                         </div>
-                        <p className="font-bold text-gray-900">${(producto.precio * producto.cantidad).toLocaleString()}</p>
+                      ))
+                    ) : (
+                      <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500">
+                        No hay productos en este pedido
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
 
@@ -382,27 +332,88 @@ export default function PedidosPage() {
                 <div className="border-t border-gray-200 pt-4 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Subtotal</span>
-                    <span className="font-semibold text-gray-900">${selectedOrder.subtotal.toLocaleString()}</span>
+                    <span className="font-semibold text-gray-900">${selectedOrder.dblSubtotal.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Envío</span>
-                    <span className="font-semibold text-gray-900">${selectedOrder.envio.toLocaleString()}</span>
+                    <span className="font-semibold text-gray-900">${selectedOrder.dblCostoEnvio.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-lg pt-2 border-t border-gray-200">
                     <span className="font-bold text-gray-900">Total</span>
-                    <span className="font-bold text-gray-900">${selectedOrder.total.toLocaleString()}</span>
+                    <span className="font-bold text-gray-900">${selectedOrder.dblTotal.toLocaleString()}</span>
                   </div>
                 </div>
 
                 {/* Acciones */}
                 <div className="flex gap-3 pt-4">
-                  <button className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
-                    Actualizar Estado
+                  <button 
+                    onClick={() => setShowEstadoModal(true)}
+                    disabled={updatingStatus}
+                    className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {updatingStatus ? 'Actualizando...' : 'Actualizar Estado'}
                   </button>
                   <button className="px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
                     Imprimir
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Actualizar Estado */}
+        {showEstadoModal && selectedOrder && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                Actualizar Estado del Pedido
+              </h3>
+              
+              <div className="mb-6">
+                <p className="text-sm text-gray-600 mb-2">
+                  Pedido #{selectedOrder.intPedido}
+                </p>
+                <p className="text-sm text-gray-600 mb-4">
+                  Estado actual: <span className="font-semibold">{getStatusConfig(selectedOrder.strEstado).label}</span>
+                </p>
+
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nuevo Estado
+                </label>
+                <select
+                  value={nuevoEstado}
+                  onChange={(e) => setNuevoEstado(e.target.value as EstadoPedido)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                >
+                  <option value="">Seleccionar estado...</option>
+                  <option value="PENDIENTE">Pendiente</option>
+                  <option value="PROCESANDO">Procesando</option>
+                  <option value="EMPAQUETANDO">Empaquetando</option>
+                  <option value="ENVIADO">Enviado</option>
+                  <option value="ENTREGADO">Entregado</option>
+                  <option value="CANCELADO">Cancelado</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowEstadoModal(false);
+                    setNuevoEstado('');
+                  }}
+                  disabled={updatingStatus}
+                  className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleActualizarEstado}
+                  disabled={!nuevoEstado || updatingStatus}
+                  className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {updatingStatus ? 'Actualizando...' : 'Confirmar'}
+                </button>
               </div>
             </div>
           </div>

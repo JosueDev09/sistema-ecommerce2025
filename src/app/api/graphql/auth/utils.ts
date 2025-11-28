@@ -23,7 +23,7 @@ export function generateToken(payload: { id: number; usuario: string; rol: strin
 export function verifyToken(token: string) {
   try {
     const decoded = jwt.verify(token, SECRET_KEY);
-    console.log("✅ Token verificado correctamente:", decoded);
+   // console.log("✅ Token verificado correctamente:", decoded);
     return decoded as {
       id: number;
       usuario: string;

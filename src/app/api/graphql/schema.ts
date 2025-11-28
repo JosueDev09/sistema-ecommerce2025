@@ -13,8 +13,8 @@ export const typeDefs = gql`
 
   enum EstadoPedido {
     PENDIENTE
-    PAGADO
-    EN_PROCESO
+    PROCESANDO
+    EMPAQUETANDO
     ENVIADO
     ENTREGADO
     CANCELADO
@@ -22,7 +22,7 @@ export const typeDefs = gql`
 
   enum EstadoPago {
     PENDIENTE
-    APROBADO
+    PAGADO
     RECHAZADO
     CANCELADO
     REEMBOLSADO
@@ -148,14 +148,15 @@ export const typeDefs = gql`
     dblSubtotal: Float!
     dblCostoEnvio: Float!
     dblTotal: Float!
-    strEstado: String!
+    strEstado: String!          # 🚚 Estado de envío
+    strEstadoPago: String!      # 💰 Estado de pago (NUEVO)
     strMetodoEnvio: String
     strNotasEnvio: String
     datPedido: String!
-    tbCliente: Cliente      # ✨ Permitir null temporalmente
-    tbDireccion: Direccion
-    tbItems: [PedidoItem!]!
-    tbPago: Pago
+    tbClientes: Cliente      # ✨ Permitir null temporalmente
+    tbDirecciones: Direccion
+    tbItems: [PedidoItem!]  # ✨ Permitir array null (sin el !)
+    tbPagos: Pago
 }
 
   type Direccion {
@@ -556,6 +557,7 @@ export const typeDefs = gql`
 
     # Pedidos
     crearPedido(data: PedidoInput!): Pedido!
+    actualizarEstadoPedido(intPedido: Int!, strEstado: EstadoPedido!): Pedido!
     eliminarPedido(intPedido: Int!): Boolean!
 
     # Direcciones

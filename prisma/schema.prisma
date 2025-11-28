@@ -10,7 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 model tbClientes {
@@ -26,31 +26,31 @@ model tbClientes {
   // Relaciones
   tbDirecciones tbDirecciones[]
   tbPedidos     tbPedidos[]
-  tbTarjetas    tbTarjetas[]    // ✨ NUEVO
+  tbTarjetas    tbTarjetas[] // ✨ NUEVO
 }
 
 model tbEmpleados {
-  intEmpleado         Int          @id @default(autoincrement())
-  strNombre           String
-  datFechaNacimiento  DateTime?
-  strEmail            String       @unique
-  strTelefono         String?
-  strDireccion        String?
-  strCiudad           String?
-  strEstado           String?
-  intCP               Int?
-  strPuesto           String
-  strDepartamento     String
-  dblSalario          Float
-  datFechaIngreso     DateTime
-  strTipoContrato     String
-  strHorario          String
-  strUsuario          String       @unique
-  strContra           String
-  strRol              RolEmpleado
-  bolActivo           Boolean      @default(true)
-  datCreacion         DateTime     @default(now())
-  datActualizacion    DateTime     @updatedAt
+  intEmpleado        Int         @id @default(autoincrement())
+  strNombre          String
+  datFechaNacimiento DateTime?
+  strEmail           String      @unique
+  strTelefono        String?
+  strDireccion       String?
+  strCiudad          String?
+  strEstado          String?
+  intCP              Int?
+  strPuesto          String
+  strDepartamento    String
+  dblSalario         Float
+  datFechaIngreso    DateTime
+  strTipoContrato    String
+  strHorario         String
+  strUsuario         String      @unique
+  strContra          String
+  strRol             RolEmpleado
+  bolActivo          Boolean     @default(true)
+  datCreacion        DateTime    @default(now())
+  datActualizacion   DateTime    @updatedAt
 
   // Relaciones
   tbProductos tbProductos[] @relation("EmpleadoProductos")
@@ -80,36 +80,36 @@ model tbCategorias {
 }
 
 model tbProductos {
-  intProducto              Int      @id @default(autoincrement())
-  strNombre                String
-  strSKU                   String?  @unique
-  strMarca                 String?
-  strDescripcion           String?
-  strDescripcionLarga      String?
-  dblPrecio                Float
-  intStock                 Int      @default(0)
-  intStockMinimo           Int?
-  strImagen                String?
-  bolActivo                Boolean  @default(true)
-  bolDestacado             Boolean  @default(false)
-  strEstado                String   @default("activo")
-  
+  intProducto         Int     @id @default(autoincrement())
+  strNombre           String
+  strSKU              String? @unique
+  strMarca            String?
+  strDescripcion      String?
+  strDescripcionLarga String?
+  dblPrecio           Float
+  intStock            Int     @default(0)
+  intStockMinimo      Int?
+  strImagen           String?
+  bolActivo           Boolean @default(true)
+  bolDestacado        Boolean @default(false)
+  strEstado           String  @default("activo")
+
   // Campos de descuento
-  bolTieneDescuento        Boolean  @default(false)
-  dblPrecioDescuento       Float?
-  intPorcentajeDescuento   Int?
-  datInicioDescuento       DateTime?
-  datFinDescuento          DateTime?
-  
+  bolTieneDescuento      Boolean   @default(false)
+  dblPrecioDescuento     Float?
+  intPorcentajeDescuento Int?
+  datInicioDescuento     DateTime?
+  datFinDescuento        DateTime?
+
   // Campos adicionales
-  strPeso                  String?
-  strDimensiones           String?
-  strEtiquetas             String?
-  jsonVariantes            String?  // JSON string para las variantes
-  jsonImagenes             String?  // JSON string para múltiples imágenes
-  
-  datCreacion              DateTime @default(now())
-  datActualizacion         DateTime @updatedAt
+  strPeso        String?
+  strDimensiones String?
+  strEtiquetas   String?
+  jsonVariantes  String? // JSON string para las variantes
+  jsonImagenes   String? // JSON string para múltiples imágenes
+
+  datCreacion      DateTime @default(now())
+  datActualizacion DateTime @updatedAt
 
   intCategoria Int
   tbCategoria  tbCategorias @relation(fields: [intCategoria], references: [intCategoria])
@@ -124,45 +124,54 @@ model tbProductos {
 //  PEDIDOS Y DETALLES
 // ======================================================
 model tbPedidos {
-  intPedido        Int          @id @default(autoincrement())
+  intPedido        Int            @id @default(autoincrement())
   intCliente       Int
-  intDireccion     Int?         // ✨ NUEVO: Relación con dirección de envío
-  dblTotal         Float        @default(0)
-  dblSubtotal      Float        @default(0)  // ✨ NUEVO: Subtotal sin envío
-  dblCostoEnvio    Float        @default(0)  // ✨ NUEVO: Costo del envío
-  strEstado        EstadoPedido @default(PENDIENTE)
-  strMetodoEnvio   String?      // ✨ NUEVO: express, estandar, recoger
-  strNotasEnvio    String?      // ✨ NUEVO: Notas adicionales de envío
-  datPedido        DateTime     @default(now())
-  datActualizacion DateTime     @updatedAt
+  intDireccion     Int? // ✨ NUEVO: Relación con dirección de envío
+  dblTotal         Float          @default(0)
+  dblSubtotal      Float          @default(0) // ✨ NUEVO: Subtotal sin envío
+  dblCostoEnvio    Float          @default(0) // ✨ NUEVO: Costo del envío
+  strEstado        EstadoPedido   @default(PENDIENTE) // 🚚 Estado de ENVÍO
+  strEstadoPago    EstadoPagoEnum @default(PENDIENTE) // 💰 Estado de PAGO (NUEVO)
+  strMetodoEnvio   String? // ✨ NUEVO: express, estandar, recoger
+  strNotasEnvio    String? // ✨ NUEVO: Notas adicionales de envío
+  datPedido        DateTime       @default(now())
+  datActualizacion DateTime       @updatedAt
 
-  tbClientes   tbClientes       @relation(fields: [intCliente], references: [intCliente])
+  tbClientes    tbClientes       @relation(fields: [intCliente], references: [intCliente])
   tbDirecciones tbDirecciones?   @relation(fields: [intDireccion], references: [intDireccion]) // ✨ NUEVO
-  tbItems     tbPedidosItems[]
-  tbPagos      tbPagos?
+  tbItems       tbPedidosItems[]
+  tbPagos       tbPagos?
 
   @@index([intCliente])
   @@index([strEstado])
 }
 
 model tbPedidosItems {
-  intPedidoItem Int   @id @default(autoincrement())
-  intPedido     Int
-  intProducto   Int
-  intCantidad   Int   @default(1)
-  dblSubtotal   Float @default(0)
-  dblPrecioUnitario Float @default(0)
-  tbPedido   tbPedidos   @relation(fields: [intPedido], references: [intPedido])
-  tbProducto tbProductos @relation(fields: [intProducto], references: [intProducto])
+  intPedidoItem     Int         @id @default(autoincrement())
+  intPedido         Int
+  intProducto       Int
+  intCantidad       Int         @default(1)
+  dblSubtotal       Float       @default(0)
+  dblPrecioUnitario Float       @default(0)
+  tbPedido          tbPedidos   @relation(fields: [intPedido], references: [intPedido])
+  tbProducto        tbProductos @relation(fields: [intProducto], references: [intProducto])
 }
 
 enum EstadoPedido {
   PENDIENTE
-  PAGADO
-  EN_PROCESO
+  PROCESANDO
+  EMPAQUETANDO
   ENVIADO
   ENTREGADO
   CANCELADO
+}
+
+enum EstadoPagoEnum {
+  PENDIENTE
+  PAGADO
+  RECHAZADO
+  CANCELADO
+  REEMBOLSADO
 }
 
 // ======================================================
@@ -170,18 +179,18 @@ enum EstadoPedido {
 // ======================================================
 
 model tbPagos {
-  intPago              Int      @id @default(autoincrement())
-  intPedido            Int      @unique
-  strMetodoPago        String   // tarjeta, paypal, efectivo
-  dblMonto             Float
-  strEstado            String   @default("PENDIENTE") // PENDIENTE, APROBADO, RECHAZADO
-  strMercadoPagoId     String?  // ID del pago en MercadoPago
-  strPreferenciaId     String?  // ID de la preferencia creada
-  intCuotas            Int?     // Meses sin intereses
-  jsonDetallesPago     String?  // JSON con detalles adicionales
+  intPago                  Int      @id @default(autoincrement())
+  intPedido                Int      @unique
+  strMetodoPago            String // tarjeta, paypal, efectivo
+  dblMonto                 Float
+  strEstado                String   @default("PENDIENTE") // PENDIENTE, APROBADO, RECHAZADO
+  strMercadoPagoId         String? // ID del pago en MercadoPago
+  strPreferenciaId         String? // ID de la preferencia creada
+  intCuotas                Int? // Meses sin intereses
+  jsonDetallesPago         String? // JSON con detalles adicionales
   jsonRespuestaMercadoPago String? // Respuesta completa de MP
-  datCreacion          DateTime @default(now())
-  datActualizacion     DateTime @updatedAt
+  datCreacion              DateTime @default(now())
+  datActualizacion         DateTime @updatedAt
 
   tbPedido tbPedidos @relation(fields: [intPedido], references: [intPedido])
 
@@ -189,6 +198,7 @@ model tbPagos {
   @@index([strMercadoPagoId])
   @@index([strPreferenciaId])
 }
+
 enum EstadoPago {
   PENDIENTE
   APROBADO
@@ -221,25 +231,24 @@ model tbDirecciones {
 }
 
 model tbDescuentosCodigos {
-  intDescuentoCodigo Int    @id @default(autoincrement())
-  strCodigo          String @unique
-  intPorcentajeDescuento       Int
-  datFechaInicio     DateTime
-  datFechaFin        DateTime
-  bolActivo          Boolean @default(true)
+  intDescuentoCodigo     Int      @id @default(autoincrement())
+  strCodigo              String   @unique
+  intPorcentajeDescuento Int
+  datFechaInicio         DateTime
+  datFechaFin            DateTime
+  bolActivo              Boolean  @default(true)
 }
 
-
 model tbTarjetas {
-  intTarjeta         Int      @id @default(autoincrement())
-  intCliente         Int
-  strNumeroTarjeta   String   // Solo últimos 4 dígitos
-  strNombreTarjeta   String
-  strTipoTarjeta     String   // visa, mastercard, amex
-  strFechaExpiracion String   // MM/YY
+  intTarjeta          Int      @id @default(autoincrement())
+  intCliente          Int
+  strNumeroTarjeta    String // Solo últimos 4 dígitos
+  strNombreTarjeta    String
+  strTipoTarjeta      String // visa, mastercard, amex
+  strFechaExpiracion  String // MM/YY
   strTokenMercadoPago String? // ✨ Token de MercadoPago para reutilizar
-  datCreacion        DateTime @default(now())
-  datActualizacion   DateTime @updatedAt
+  datCreacion         DateTime @default(now())
+  datActualizacion    DateTime @updatedAt
 
   tbCliente tbClientes @relation(fields: [intCliente], references: [intCliente])
 
