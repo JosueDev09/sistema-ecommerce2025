@@ -433,3 +433,169 @@ export async function enviarEmailsConfirmacion(pedido: any): Promise<{
     emailAdmin,
   };
 }
+
+// ===================================================================
+// EMAILS DE ACTUALIZACIÓN DE ESTADO DEL PEDIDO
+// ===================================================================
+
+// Template para actualización de estado
+function templateActualizacionEstado(pedido: any, estado: string) {
+  const fechaActualizacion = new Date().toLocaleDateString('es-MX', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  // Configuración por estado
+  const estadosConfig: Record<string, {
+    color: string;
+    icon: string;
+    titulo: string;
+    mensaje: string;
+    accion?: string;
+  }> = {
+    PROCESANDO: {
+      color: '#3b82f6',
+      icon: '⚙️',
+      titulo: 'Tu pedido está siendo procesado',
+      mensaje: 'Hemos recibido tu pago y estamos preparando tu pedido. Pronto comenzaremos a empaquetarlo.',
+      accion: 'Estamos verificando tu pago y preparando los productos.'
+    },
+    EMPAQUETANDO: {
+      color: '#8b5cf6',
+      icon: '📦',
+      titulo: 'Tu pedido está siendo empaquetado',
+      mensaje: 'Nuestro equipo está empaquetando cuidadosamente tus productos. ¡Pronto estará listo para envío!',
+      accion: 'Empaquetando tus productos con cuidado.'
+    },
+    ENVIADO: {
+      color: '#10b981',
+      icon: '🚚',
+      titulo: '¡Tu pedido ha sido enviado!',
+      mensaje: 'Tu pedido está en camino. Recibirás tu paquete en los próximos días.',
+      accion: 'Tu pedido está en tránsito hacia tu dirección.'
+    },
+    ENTREGADO: {
+      color: '#059669',
+      icon: '✅',
+      titulo: '¡Tu pedido ha sido entregado!',
+      mensaje: 'Esperamos que disfrutes tu compra. ¡Gracias por confiar en nosotros!',
+      accion: 'Tu pedido ha sido entregado exitosamente.'
+    },
+    CANCELADO: {
+      color: '#ef4444',
+      icon: '❌',
+      titulo: 'Tu pedido ha sido cancelado',
+      mensaje: 'Lamentamos informarte que tu pedido ha sido cancelado. Si tienes dudas, contáctanos.',
+      accion: 'El pedido fue cancelado.'
+    }
+  };
+
+  const config = estadosConfig[estado] || estadosConfig.PROCESANDO;
+
+  return `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="utf-8"/>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+      <title>Actualización de Pedido</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #f6f6f8; }
+        .container { max-width: 960px; margin: 0 auto; padding: 20px; }
+        .card { background: white; border-radius: 12px; border: 1px solid #e5e7eb; padding: 40px; margin: 20px 0; }
+        .header { text-align: center; padding: 24px 16px; }
+        .icon { font-size: 64px; margin-bottom: 16px; }
+        h1 { font-size: 28px; font-weight: bold; color: #111318; margin: 16px 0; }
+        .subtitle { color: #636f88; font-size: 16px; line-height: 1.5; margin: 8px 0 24px; }
+        .status-badge { display: inline-block; background: ${config.color}20; color: ${config.color}; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; margin: 16px 0; }
+        .info-box { background: #f9fafb; border-radius: 8px; padding: 20px; margin: 24px 0; }
+        .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #e5e7eb; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: #636f88; font-size: 14px; }
+        .info-value { color: #111318; font-weight: 600; font-size: 14px; }
+        .button { display: inline-block; background: ${config.color}; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin: 24px 0; }
+        .footer { text-align: center; color: #636f88; font-size: 14px; padding: 24px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="card">
+          <div class="header">
+            <div class="icon">${config.icon}</div>
+            <h1>${config.titulo}</h1>
+            <p class="subtitle">${config.mensaje}</p>
+            <span class="status-badge">${estado}</span>
+          </div>
+
+          <div class="info-box">
+            <div class="info-row">
+              <span class="info-label">Número de Pedido</span>
+              <span class="info-value">#${pedido.intPedido}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Fecha de Actualización</span>
+              <span class="info-value">${fechaActualizacion}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Estado Actual</span>
+              <span class="info-value">${estado}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Cliente</span>
+              <span class="info-value">${pedido.tbClientes?.strNombre || 'Cliente'}</span>
+            </div>
+          </div>
+
+          <div style="text-align: center;">
+            <a href="${process.env.FRONTEND_URL}/pedidos" class="button">
+              Ver Mi Pedido
+            </a>
+          </div>
+
+          <div class="footer">
+            <p>Este es un correo automático, por favor no respondas.</p>
+            <p style="margin-top: 8px;">© 2025 ESYMBEL STORE. Todos los derechos reservados.</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+// Enviar email de actualización de estado
+export async function enviarEmailActualizacionEstado(pedido: any, nuevoEstado: string): Promise<boolean> {
+  try {
+    const clienteEmail = pedido.tbClientes?.strEmail;
+    
+    if (!clienteEmail) {
+      console.warn('⚠️ No se encontró email del cliente para pedido #' + pedido.intPedido);
+      return false;
+    }
+
+    // No enviar email para estado PENDIENTE (ya se envió al crear el pedido)
+    if (nuevoEstado === 'PENDIENTE') {
+      console.log('ℹ️ No se envía email para estado PENDIENTE');
+      return true;
+    }
+
+    console.log(`📧 Enviando email de actualización de estado: ${nuevoEstado} a ${clienteEmail}`);
+
+    const info = await transporter.sendMail({
+      from: `"ESYMBEL STORE" <${process.env.SMTP_USER}>`,
+      to: clienteEmail,
+      subject: `Actualización de tu Pedido #${pedido.intPedido} - ${nuevoEstado}`,
+      html: templateActualizacionEstado(pedido, nuevoEstado),
+    });
+
+    console.log(`✅ Email de actualización enviado: ${info.messageId}`);
+    return true;
+  } catch (error: any) {
+    console.error('❌ Error al enviar email de actualización:', error);
+    return false;
+  }
+}

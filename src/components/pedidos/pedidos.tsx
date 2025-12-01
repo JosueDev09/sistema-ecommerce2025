@@ -24,6 +24,7 @@ export default function PedidosPage() {
 
   const [showEstadoModal, setShowEstadoModal] = useState(false);
   const [nuevoEstado, setNuevoEstado] = useState<EstadoPedido | ''>('');
+  const [activeTab, setActiveTab] = useState<'info' | 'productos'>('info');
 
   const handleActualizarEstado = async () => {
     if (!selectedOrder || !nuevoEstado) return;
@@ -166,7 +167,10 @@ export default function PedidosPage() {
                     Total
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Estado
+                    Estado Envío
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Estado Pago
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                     Acciones
@@ -176,7 +180,9 @@ export default function PedidosPage() {
               <tbody className="divide-y divide-gray-100">
                 {filteredPedidos.map((pedido) => {
                   const statusConfig = getStatusConfig(pedido.strEstado);
+                  const statusPagoConfig = getStatusConfig(pedido.strEstadoPago);
                   const StatusIcon = statusConfig.icon;
+                  const StatusPagoIcon = statusPagoConfig.icon;
                   
                   return (
                     <tr key={pedido.intPedido} className="hover:bg-gray-50 transition-colors">
@@ -197,8 +203,14 @@ export default function PedidosPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${statusConfig.bg} ${statusConfig.color}`}>
-                          <StatusIcon className="w-3.5 h-3.5" />
+                          <StatusPagoIcon className="w-3.5 h-3.5" />
                           {statusConfig.label}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${statusPagoConfig.bg} ${statusPagoConfig.color}`}>
+                          <StatusIcon className="w-3.5 h-3.5" />
+                          {statusPagoConfig.label}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -220,7 +232,7 @@ export default function PedidosPage() {
 
         {/* Modal de Detalle */}
         {showModal && selectedOrder && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+           <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
               {/* Header */}
               <div className="sticky top-0 bg-white border-b border-gray-100 p-6 flex items-center justify-between">
@@ -253,63 +265,125 @@ export default function PedidosPage() {
                   <span className="text-sm text-gray-600">{formatFecha(selectedOrder.datPedido)}</span>
                 </div>
 
-                {/* Información del Cliente */}
-                <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-                  <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                    <User className="w-5 h-5 text-gray-600" />
-                    Información del Cliente
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-gray-500">Nombre</p>
-                      <p className="font-semibold text-gray-900">{selectedOrder.tbClientes?.strNombre || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Email</p>
-                      <p className="font-semibold text-gray-900">{selectedOrder.tbClientes?.strEmail || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Teléfono</p>
-                      <p className="font-semibold text-gray-900">{selectedOrder.tbClientes?.strTelefono || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Método de Pago</p>
-                      <p className="font-semibold text-gray-900">{selectedOrder.tbPagos?.strMetodoPago || 'N/A'}</p>
-                    </div>
+                {/* Tabs */}
+                <div className="border-b border-gray-200">
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => setActiveTab('info')}
+                      className={`pb-3 px-2 font-semibold text-sm transition-colors border-b-2 ${
+                        activeTab === 'info'
+                          ? 'border-blue-600 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        Información
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('productos')}
+                      className={`pb-3 px-2 font-semibold text-sm transition-colors border-b-2 ${
+                        activeTab === 'productos'
+                          ? 'border-blue-600 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <Package className="w-4 h-4" />
+                        Productos ({selectedOrder.tbItems?.length || 0})
+                      </span>
+                    </button>
                   </div>
                 </div>
 
-                {/* Dirección de Envío */}
-                {selectedOrder.tbDirecciones && (
-                  <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                      <MapPin className="w-5 h-5 text-gray-600" />
-                      Dirección de Envío
-                    </h3>
-                    <p className="text-sm text-gray-700">
-                      {selectedOrder.tbDirecciones.strCalle} {selectedOrder.tbDirecciones.strNumeroExterior}
-                      {selectedOrder.tbDirecciones.strNumeroInterior && ` Int. ${selectedOrder.tbDirecciones.strNumeroInterior}`}, {selectedOrder.tbDirecciones.strColonia}, {selectedOrder.tbDirecciones.strCiudad}, {selectedOrder.tbDirecciones.strEstado}, CP {selectedOrder.tbDirecciones.strCP}
-                    </p>
-                    {selectedOrder.tbDirecciones.strReferencias && (
-                      <p className="text-xs text-gray-600 mt-2">
-                        <span className="font-semibold">Referencias:</span> {selectedOrder.tbDirecciones.strReferencias}
-                      </p>
+                {/* Tab Content: Información */}
+                {activeTab === 'info' && (
+                  <div className="space-y-4">
+                    {/* Información del Cliente */}
+                    <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                      <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                        <User className="w-5 h-5 text-gray-600" />
+                        Información del Cliente
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-gray-500">Nombre</p>
+                          <p className="font-semibold text-gray-900">{selectedOrder.tbClientes?.strNombre || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Email</p>
+                          <p className="font-semibold text-gray-900">{selectedOrder.tbClientes?.strEmail || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Teléfono</p>
+                          <p className="font-semibold text-gray-900">{selectedOrder.tbClientes?.strTelefono || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Método de Pago</p>
+                          <p className="font-semibold text-gray-900">{selectedOrder.tbPagos?.strMetodoPago || 'N/A'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dirección de Envío */}
+                    {selectedOrder.tbDirecciones && (
+                      <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                        <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                          <MapPin className="w-5 h-5 text-gray-600" />
+                          Dirección de Envío
+                        </h3>
+                        <p className="text-sm text-gray-700">
+                          {selectedOrder.tbDirecciones.strCalle} {selectedOrder.tbDirecciones.strNumeroExterior}
+                          {selectedOrder.tbDirecciones.strNumeroInterior && ` Int. ${selectedOrder.tbDirecciones.strNumeroInterior}`}, {selectedOrder.tbDirecciones.strColonia}, {selectedOrder.tbDirecciones.strCiudad}, {selectedOrder.tbDirecciones.strEstado}, CP {selectedOrder.tbDirecciones.strCP}
+                        </p>
+                        {selectedOrder.tbDirecciones.strReferencias && (
+                          <p className="text-xs text-gray-600 mt-2">
+                            <span className="font-semibold">Referencias:</span> {selectedOrder.tbDirecciones.strReferencias}
+                          </p>
+                        )}
+                      </div>
                     )}
+
+                    {/* Totales */}
+                    <div className="border-t border-gray-200 pt-4 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Subtotal</span>
+                        <span className="font-semibold text-gray-900">${selectedOrder.dblSubtotal.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Envío</span>
+                        <span className="font-semibold text-gray-900">${selectedOrder.dblCostoEnvio.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-lg pt-2 border-t border-gray-200">
+                        <span className="font-bold text-gray-900">Total</span>
+                        <span className="font-bold text-gray-900">${selectedOrder.dblTotal.toLocaleString()}</span>
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                {/* Productos */}
-                <div>
-                  <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <Package className="w-5 h-5 text-gray-600" />
-                    Productos
-                  </h3>
-                  <div className="space-y-3">
+                {/* Tab Content: Productos */}
+                {activeTab === 'productos' && (
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                    
                     {selectedOrder.tbItems && selectedOrder.tbItems.length > 0 ? (
                       selectedOrder.tbItems.map((item, index) => (
-                        <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                          <div className="flex-1">
-                            <p className="font-semibold text-gray-900">{item.tbProducto.strNombre}</p>
+                        <div key={index} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                          <div className="flex-shrink-0 w-16 h-16 bg-white rounded-lg border border-gray-200 flex items-center justify-center">
+                            {item.tbProducto.strImagen ? (
+                              
+                              <img 
+                                src={item.tbProducto.strImagen} 
+                                alt={item.tbProducto.strNombre}
+                                className="w-full h-full object-cover rounded-lg"
+                              />
+                            ) : (
+                              <Package className="w-8 h-8 text-gray-400" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-900 truncate">{item.tbProducto.strNombre}</p>
                             <p className="text-sm text-gray-500">
                               Cantidad: {item.intCantidad} × ${item.tbProducto.dblPrecio.toLocaleString()}
                             </p>
@@ -317,32 +391,19 @@ export default function PedidosPage() {
                               <p className="text-xs text-gray-400">SKU: {item.tbProducto.strSKU}</p>
                             )}
                           </div>
-                          <p className="font-bold text-gray-900">${item.dblSubtotal.toLocaleString()}</p>
+                          <div className="text-right">
+                            <p className="font-bold text-gray-900">${item.dblSubtotal.toLocaleString()}</p>
+                          </div>
                         </div>
                       ))
                     ) : (
-                      <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500">
-                        No hay productos en este pedido
+                      <div className="p-8 bg-gray-50 rounded-lg text-center">
+                        <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500">No hay productos en este pedido</p>
                       </div>
                     )}
                   </div>
-                </div>
-
-                {/* Totales */}
-                <div className="border-t border-gray-200 pt-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Subtotal</span>
-                    <span className="font-semibold text-gray-900">${selectedOrder.dblSubtotal.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Envío</span>
-                    <span className="font-semibold text-gray-900">${selectedOrder.dblCostoEnvio.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-lg pt-2 border-t border-gray-200">
-                    <span className="font-bold text-gray-900">Total</span>
-                    <span className="font-bold text-gray-900">${selectedOrder.dblTotal.toLocaleString()}</span>
-                  </div>
-                </div>
+                )}
 
                 {/* Acciones */}
                 <div className="flex gap-3 pt-4">
@@ -351,7 +412,7 @@ export default function PedidosPage() {
                     disabled={updatingStatus}
                     className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {updatingStatus ? 'Actualizando...' : 'Actualizar Estado'}
+                    {updatingStatus ? 'Actualizando...' : 'Actualizar Estado Del Pedido'}
                   </button>
                   <button className="px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
                     Imprimir

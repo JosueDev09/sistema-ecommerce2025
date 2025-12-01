@@ -93,23 +93,27 @@ export async function POST(request: NextRequest) {
 
     // Mapear el estado de Mercado Pago a nuestro sistema
     let estadoPago = "PENDIENTE";
-    let estadoPedido: any = "EN_PROCESO";
+    let estadoPedido: any = "PENDIENTE";
+    let estadoPagoPedido: any = "PENDIENTE";
 
     switch (payment.status) {
       case 'approved':
         estadoPago = "APROBADO";
-        estadoPedido = "PAGADO";
+        estadoPedido = "PROCESANDO";  // Pedido listo para procesar
+        estadoPagoPedido = "PAGADO";  // Pago confirmado
         console.log("✅ Pago aprobado");
         break;
       case 'pending':
       case 'in_process':
         estadoPago = "PENDIENTE";
-        estadoPedido = "EN_PROCESO";
+        estadoPedido = "PENDIENTE";
+        estadoPagoPedido = "PENDIENTE";
         console.log("⏳ Pago pendiente");
         break;
       case 'rejected':
         estadoPago = "RECHAZADO";
         estadoPedido = "CANCELADO";
+        estadoPagoPedido = "RECHAZADO";
         console.log("❌ Pago rechazado");
         
         // Devolver stock si el pago fue rechazado
@@ -133,6 +137,7 @@ export async function POST(request: NextRequest) {
       case 'cancelled':
         estadoPago = "CANCELADO";
         estadoPedido = "CANCELADO";
+        estadoPagoPedido = "CANCELADO";
         console.log("🚫 Pago cancelado");
         
         // Devolver stock si el pago fue cancelado
@@ -156,6 +161,7 @@ export async function POST(request: NextRequest) {
       case 'refunded':
         estadoPago = "REEMBOLSADO";
         estadoPedido = "CANCELADO";
+        estadoPagoPedido = "REEMBOLSADO";
         console.log("💸 Pago reembolsado");
         
         // Devolver stock si el pago fue reembolsado
@@ -196,7 +202,8 @@ export async function POST(request: NextRequest) {
     await db.tbPedidos.update({
       where: { intPedido: pago.intPedido },
       data: { 
-        strEstado: estadoPedido 
+        strEstado: estadoPedido,
+        strEstadoPago: estadoPagoPedido
       },
     });
 
@@ -209,7 +216,8 @@ export async function POST(request: NextRequest) {
       paymentId: paymentId,
       status: payment.status,
       estadoPago: estadoPago,
-      estadoPedido: estadoPedido
+      estadoPedido: estadoPedido,
+      estadoPagoPedido: estadoPagoPedido
     });
 
   } catch (error: any) {

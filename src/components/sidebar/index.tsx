@@ -42,6 +42,12 @@ const routes = [
     roles: ["SuperAdmin", "admin", "usuario"],
   },
   {
+    name: "Clientes",
+    path: "/clientes",
+    icon: <Users size={20} />,
+    roles: ["SuperAdmin", "admin", "usuario"],
+  },
+  {
     name: "Proveedores",
     icon: <Truck size={20} />,
     roles: ["SuperAdmin"],

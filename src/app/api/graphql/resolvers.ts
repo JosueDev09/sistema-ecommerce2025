@@ -3,7 +3,7 @@ import { db } from "../../../lib/db"; // tu PrismaClient global
 import { verifyPassword, generateToken } from "./auth/utils";
 import bcrypt from "bcryptjs";
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
-import { enviarEmailsConfirmacion } from "../../../lib/email";
+import { enviarEmailsConfirmacion, enviarEmailActualizacionEstado } from "../../../lib/email";
 
 // Configurar MercadoPago con la nueva API
 const client = new MercadoPagoConfig({ 
@@ -76,6 +76,14 @@ export const resolvers = {
     },
     obtenerEmpleados: async () => {
       return await db.tbEmpleados.findMany();
+    },
+    obtenerClientes: async () => {
+      return await db.tbClientes.findMany({
+        include: {
+          tbDirecciones: true,
+          tbPedidos: true
+        }
+      });
     },
     obtenerPedidos: async () => {
       const pedidos = await db.tbPedidos.findMany({
@@ -627,6 +635,17 @@ export const resolvers = {
 
         console.log(`✅ Pedido #${intPedido} actualizado a estado: ${strEstado}`);
         
+        // 📧 Enviar email de actualización al cliente
+        try {
+          const emailEnviado = await enviarEmailActualizacionEstado(pedidoActualizado, strEstado);
+          if (emailEnviado) {
+            console.log(`📬 Email de actualización enviado al cliente`);
+          }
+        } catch (emailError) {
+          console.error('⚠️ Error al enviar email (pero el pedido se actualizó):', emailError);
+          // No lanzar error, el pedido ya se actualizó correctamente
+        }
+        
         return pedidoActualizado;
       } catch (error) {
         console.error("Error al actualizar estado del pedido:", error);
@@ -893,28 +912,16 @@ export const resolvers = {
           metadata.token_tarjeta || 
           metadata.strTokenTarjeta;
 
-        // console.log("� DEBUG - Buscando token en:");
-        // console.log("  - data.strTokenTarjeta:", data.strTokenTarjeta || "❌");
-        // console.log("  - data.formData.strTokenTarjeta:", data.formData?.strTokenTarjeta || "❌");
-        // console.log("  - metadata.token_tarjeta:", metadata.token_tarjeta || "❌");
-        // console.log("  - metadata.strTokenTarjeta:", metadata.strTokenTarjeta || "❌");
-
-        // 🎯 DETECTAR SI SE ESTÁ USANDO UNA TARJETA GUARDADA
-        // console.log("🔍 Verificando tarjeta guardada:");
-        // console.log("  - tokenTarjeta value:", tokenTarjeta);
-        // console.log("  - tokenTarjeta === 'USAR_TOKEN_GUARDADO':", tokenTarjeta === "USAR_TOKEN_GUARDADO");
-        // console.log("  - data.formData?.intTarjetaGuardada:", data.formData?.intTarjetaGuardada);
-        // console.log("  - data.formData?.bolUsandoTarjetaGuardada:", data.formData?.bolUsandoTarjetaGuardada);
 
         // Si es tarjeta guardada pero no viene el ID, buscar en las tarjetas del cliente
         if (tokenTarjeta === "USAR_TOKEN_GUARDADO" && data.formData?.bolUsandoTarjetaGuardada) {
-          console.log("💳 Detectada tarjeta guardada - Buscando tarjeta del cliente...");
+          //console.log("💳 Detectada tarjeta guardada - Buscando tarjeta del cliente...");
           
           let idTarjeta = data.formData?.intTarjetaGuardada;
           
           // Si no viene el ID directamente, buscar por últimos 4 dígitos y nombre
           if (!idTarjeta && data.formData?.strNumeroTarjetaUltimos4) {
-            console.log("� Buscando tarjeta por últimos 4 dígitos:", data.formData.strNumeroTarjetaUltimos4);
+            //console.log("� Buscando tarjeta por últimos 4 dígitos:", data.formData.strNumeroTarjetaUltimos4);
             
             const tarjetasCliente = await db.tbTarjetas.findMany({
               where: {
@@ -975,36 +982,50 @@ export const resolvers = {
             return mapa[tipoTarjeta?.toLowerCase()] || 'visa';
           };
 
-          // Crear pago directo con el token
-          const paymentData: any = {
-            token: tokenTarjeta,
-            transaction_amount: parseFloat(data.montos.dblTotal.toString()),
-            installments: parseInt(data.formData.intMesesSinIntereses || "1"),
-            //payment_method_id: detectarMetodoPago(data.formData.strTipoTarjeta),
-            description: `Pedido #${data.intPedido} - ESYMBEL STORE`,
-            
-            payer: {
-              email: data.payer.strEmail,
-              first_name: data.payer.strNombre,
-              last_name: data.payer.strApellido || "",
-              
-            },
+          console.log('Data para pago directo:',data.payer);
 
-            external_reference: data.intPedido.toString(),
-            
-            metadata: {
-              pedido_id: data.intPedido,
-              cliente_id: data.intCliente,
-            },
-          };
+          // Crear pago directo con el token
+         const paymentData: any = {
+              token: tokenTarjeta,
+              transaction_amount: parseFloat(data.montos.dblTotal.toString()),
+              installments: parseInt(data.formData.intMesesSinIntereses || "1"),
+              description: `Pedido #${data.intPedido} - ESYMBEL STORE`,
+
+              payer: {
+                email: data.payer.strEmail || "TEST",
+                first_name: data.payer.strNombre || "USER",
+                last_name: data.payer.strApellido || "",
+
+                address: {
+                  zip_code: data.payer.objDireccion.strCP,
+                  street_name: data.payer.objDireccion.strCalle,
+                  street_number: data.payer.objDireccion.strNumeroExterior
+                },
+
+                phone: {
+                  area_code: "52",
+                  number: data.payer.objTelefono.strNumero
+                }
+              },
+
+              external_reference: data.intPedido.toString(),
+
+              metadata: {
+                pedido_id: data.intPedido,
+                cliente_id: data.intCliente,
+              }
+            };
+
 
           // Procesar el pago
           console.log("💳 Procesando pago directo con datos:", paymentData);
           const pagoResponse = await paymentClient.create({ body: paymentData });
 
-           console.log("✅ Pago directo procesado:", pagoResponse.id);
-           console.log("📊 Estado:", pagoResponse.status);
-           console.log("💰 Monto:", pagoResponse);
+          // console.log("✅ Pago directo procesado:", pagoResponse.id);
+          // console.log("📊 Estado MercadoPago:", pagoResponse.status);
+          // console.log("📝 Detalle estado:", pagoResponse.status_detail);
+          // console.log("💰 Monto:", pagoResponse.transaction_amount);
+          
           // Mapear estados de MercadoPago a tu sistema
           const mapearEstado = (status: string) => {
             const mapa: Record<string, string> = {
@@ -1042,7 +1063,7 @@ export const resolvers = {
           });
 
           // Actualizar estado del pedido según el resultado
-          let estadoPedido = "PROCESANDO";
+          let estadoPedido = "PENDIENTE";
           let estadoPago = "PENDIENTE";
           
           if (pagoResponse.status === "approved") {
@@ -1065,6 +1086,10 @@ export const resolvers = {
                 })
               )
             );
+          } else if (pagoResponse.status === "in_process" || pagoResponse.status === "pending") {
+            estadoPedido = "PENDIENTE";  // Esperando confirmación del pago
+            estadoPago = "PENDIENTE";  // Pago en proceso de revisión
+            //console.log("⏳ Pago en revisión - Se actualizará cuando MercadoPago confirme");
           }
 
           await db.tbPedidos.update({
@@ -1075,7 +1100,7 @@ export const resolvers = {
             },
           });
 
-          console.log("💾 Pago guardado en BD:", nuevoPago.intPago);
+          //console.log("💾 Pago guardado en BD:", nuevoPago.intPago);
 
           // 📧 ENVIAR EMAILS DE CONFIRMACIÓN
           let emailEnviado = false;
@@ -1113,140 +1138,6 @@ export const resolvers = {
             bolEmailEnviado: emailEnviado,
           };
         }
-
-        // ==========================================
-        // FLUJO B: CHECKOUT PRO CON PREFERENCIAS (sin token)
-        // ==========================================
-       // console.log("🌐 Usando Checkout Pro (con redirección)");
-
-        // Construir la preferencia de MercadoPago
-        const preferenceData: any = {
-          items: data.items.map((item: any) => ({
-            id: item.strId,
-            title: item.strTitulo,
-            description: item.strDescripcion || item.strTitulo,
-            picture_url: item.strImagenURL,
-            category_id: item.strCategoriaId || "others",
-            quantity: item.intCantidad,
-            currency_id: "MXN",
-            unit_price: parseFloat(item.dblPrecioUnitario),
-          })),
-
-          payer: {
-            name: data.payer.strNombre,
-            surname: data.payer.strApellido || "",
-            email: data.payer.strEmail,
-            phone: {
-              area_code: "52",
-              number: data.payer.objTelefono.strNumero,
-            },
-            address: data.payer.objDireccion
-              ? {
-                  zip_code: data.payer.objDireccion.strCodigoPostal,
-                  street_name: data.payer.objDireccion.strCalle,
-                  street_number: parseInt(data.payer.objDireccion.strNumero || data.payer.objDireccion.strNumeroExterior),
-                }
-              : undefined,
-          },
-
-          // URLs de retorno
-          back_urls: {
-            success: `${process.env.FRONTEND_URL}/checkout/success`,
-            failure: `${process.env.FRONTEND_URL}/checkout/failure`,
-            pending: `${process.env.FRONTEND_URL}/checkout/pending`,
-          },
-
-          // URL de notificación (webhook) - comentar en desarrollo local
-          // notification_url: `${process.env.BACKEND_URL}/api/webhook/mercadopago`,
-
-          // Configuración adicional
-          // auto_return: "approved", // Comentar en desarrollo local
-          binary_mode: false,
-          statement_descriptor: "ESYMBEL STORE",
-
-          // Referencia externa
-          external_reference: data.intPedido.toString(),
-
-          // Metadata
-          metadata: {
-            pedido_id: data.intPedido,
-            cliente_id: data.intCliente,
-            ...data.metadata,
-          },
-
-          // Configuración de cuotas (MSI)
-          payment_methods: {
-            installments: data.metadata?.meses_sin_intereses || 12,
-            default_installments: parseInt(data.formData.intMesesSinIntereses || "1"),
-          },
-        };
-
-        // Agregar envío si existe
-        if (data.shipments) {
-          preferenceData.shipments = {
-            cost: parseFloat(data.shipments.cost),
-            mode: data.shipments.mode,
-            receiver_address: {
-              zip_code: data.shipments.receiver_address.zip_code,
-              street_name: data.shipments.receiver_address.street_name,
-              street_number: parseInt(data.shipments.receiver_address.street_number),
-              floor: data.shipments.receiver_address.floor || "",
-              apartment: data.shipments.receiver_address.apartment || "",
-              city_name: data.shipments.receiver_address.city_name,
-              state_name: data.shipments.receiver_address.state_name,
-              country_name: data.shipments.receiver_address.country_name || "México",
-            },
-          };
-        }
-
-        // Crear la preferencia en MercadoPago
-        const mpResponse = await preferenceClient.create({ body: preferenceData });
-
-      //  console.log("✅ Preferencia creada:", mpResponse.id);
-
-        // Guardar el pago en la base de datos
-        const nuevoPago = await db.tbPagos.create({
-          data: {
-            intPedido: data.intPedido,
-            strMetodoPago: data.formData.strMetodoPago,
-            dblMonto: data.montos.dblTotal,
-            strEstado: "PENDIENTE",
-            strPreferenciaId: mpResponse.id,
-            intCuotas: parseInt(data.formData.intMesesSinIntereses || "1"),
-            jsonDetallesPago: JSON.stringify({
-              subtotal: data.montos.dblSubtotal,
-              costoEnvio: data.montos.dblCostoEnvio,
-              metodoEnvio: data.formData.strMetodoEnvio,
-              numeroTarjetaUltimos4: data.formData.strNumeroTarjetaUltimos4,
-              nombreTarjeta: data.formData.strNombreTarjeta,
-              tipoTarjeta: data.formData.strTipoTarjeta,
-            }),
-            jsonRespuestaMercadoPago: JSON.stringify(mpResponse),
-          },
-        });
-
-        // Actualizar estado del pedido
-        await db.tbPedidos.update({
-          where: { intPedido: data.intPedido },
-          data: {
-            strEstado: "PROCESANDO",
-            strEstadoPago: "PENDIENTE" as any,  // El pago aún está pendiente
-          },
-        });
-
-        //console.log("💾 Pago guardado en BD:", nuevoPago.intPago);
-
-        // 📧 ENVIAR EMAILS DE CONFIRMACIÓN (solo para preferencias, no se puede saber si se pagará)
-        // Los emails se envían mejor cuando el pago se apruebe via webhook o al retornar del checkout
-        // Por ahora, retornamos sin enviar email
-        
-        return {
-          intPago: nuevoPago.intPago,
-          strPreferenciaId: mpResponse.id || "",
-          strInitPoint: mpResponse.init_point || "",
-          strEstado: nuevoPago.strEstado,
-          bolEmailEnviado: false, // Se enviará cuando se confirme el pago
-        };
       } catch (error: any) {
         console.error("❌ Error al crear preferencia:", error);
         throw new Error(`Error al procesar el pago: ${error.message}`);

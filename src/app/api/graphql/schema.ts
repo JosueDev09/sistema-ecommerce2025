@@ -147,6 +147,7 @@ export const typeDefs = gql`
     intDireccion: Int
     dblSubtotal: Float!
     dblCostoEnvio: Float!
+    datActualizacion: String!
     dblTotal: Float!
     strEstado: String!          # 🚚 Estado de envío
     strEstadoPago: String!      # 💰 Estado de pago (NUEVO)

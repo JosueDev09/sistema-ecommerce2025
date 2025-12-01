@@ -1,70 +1,94 @@
 'use client';
 import { useState } from 'react';
-import { ShoppingCart, DollarSign, Package, Users, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, MoreVertical } from 'lucide-react';
+import { ShoppingCart, DollarSign, Package, Users, TrendingUp, TrendingDown, ArrowUpRight } from 'lucide-react';
+import { useDashboard } from '@/src/hooks/useDashboard';
 
 export default function Dashboard() {
   const [period, setPeriod] = useState('mes');
+  const { stats, pedidosRecientes, productosTop, loading, error } = useDashboard();
 
-  // Datos de ejemplo
-  const stats = [
+  // Configuración de cards de estadísticas
+  const statsCards = [
     {
       title: 'Ventas Totales',
-      value: '$45,231',
-      change: '+20.1%',
+      value: `$${stats.ventasTotales.toLocaleString()}`,
+      change: stats.cambioVentas,
       trend: 'up',
       icon: DollarSign,
       color: 'bg-emerald-500'
     },
     {
       title: 'Pedidos',
-      value: '1,234',
-      change: '+12.5%',
+      value: stats.totalPedidos.toString(),
+      change: stats.cambioPedidos,
       trend: 'up',
       icon: ShoppingCart,
       color: 'bg-blue-500'
     },
     {
       title: 'Productos',
-      value: '567',
-      change: '-2.3%',
-      trend: 'down',
+      value: stats.totalProductos.toString(),
+      change: stats.cambioProductos,
+      trend: stats.cambioProductos.includes('-') ? 'down' : 'up',
       icon: Package,
       color: 'bg-purple-500'
     },
     {
       title: 'Clientes',
-      value: '8,542',
-      change: '+8.7%',
+      value: stats.totalClientes.toString(),
+      change: stats.cambioClientes,
       trend: 'up',
       icon: Users,
       color: 'bg-orange-500'
     }
   ];
 
-  const recentOrders = [
-    { id: '#3210', customer: 'Ana García', product: 'iPhone 14 Pro', amount: '$999', status: 'Completado', date: '28 Oct 2025' },
-    { id: '#3209', customer: 'Carlos López', product: 'MacBook Air M2', amount: '$1,299', status: 'Procesando', date: '28 Oct 2025' },
-    { id: '#3208', customer: 'María Rodríguez', product: 'AirPods Pro', amount: '$249', status: 'Completado', date: '27 Oct 2025' },
-    { id: '#3207', customer: 'Juan Martínez', product: 'iPad Air', amount: '$599', status: 'Enviado', date: '27 Oct 2025' },
-    { id: '#3206', customer: 'Laura Sánchez', product: 'Apple Watch', amount: '$399', status: 'Completado', date: '26 Oct 2025' }
-  ];
-
-  const topProducts = [
-    { name: 'iPhone 14 Pro', sales: 234, revenue: '$233,766', trend: '+12%' },
-    { name: 'MacBook Air M2', sales: 145, revenue: '$188,355', trend: '+8%' },
-    { name: 'AirPods Pro', sales: 567, revenue: '$141,183', trend: '+15%' },
-    { name: 'iPad Air', sales: 189, revenue: '$113,211', trend: '+5%' },
-    { name: 'Apple Watch', sales: 267, revenue: '$106,533', trend: '+10%' }
-  ];
-
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Completado': return 'bg-emerald-100 text-emerald-700';
-      case 'Procesando': return 'bg-blue-100 text-blue-700';
-      case 'Enviado': return 'bg-purple-100 text-purple-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'Completado': 
+      case 'Entregado': 
+        return 'bg-emerald-100 text-emerald-700';
+      case 'Procesando': 
+        return 'bg-blue-100 text-blue-700';
+      case 'Enviado': 
+        return 'bg-purple-100 text-purple-700';
+      case 'Empaquetando': 
+        return 'bg-indigo-100 text-indigo-700';
+      case 'Pendiente': 
+        return 'bg-yellow-100 text-yellow-700';
+      case 'Cancelado': 
+        return 'bg-red-100 text-red-700';
+      default: 
+        return 'bg-gray-100 text-gray-700';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 font-semibold">Error: {error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -92,7 +116,7 @@ export default function Dashboard() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, index) => (
+          {statsCards.map((stat, index) => (
             <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -142,27 +166,35 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {recentOrders.map((order, index) => (
-                    <tr key={index} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-medium text-gray-900">{order.id}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-gray-900">{order.customer}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-gray-600">{order.product}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-semibold text-gray-900">{order.amount}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                          {order.status}
-                        </span>
+                  {pedidosRecientes.length > 0 ? (
+                    pedidosRecientes.map((order, index) => (
+                      <tr key={index} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm font-medium text-gray-900">{order.id}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-gray-900">{order.cliente}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm text-gray-600">{order.producto}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm font-semibold text-gray-900">{order.monto}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(order.estado)}`}>
+                            {order.estado}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                        No hay pedidos recientes
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -174,33 +206,39 @@ export default function Dashboard() {
               <h2 className="text-lg font-bold text-gray-900">Productos Top</h2>
             </div>
             <div className="p-6 space-y-4">
-              {topProducts.map((product, index) => (
-                <div key={index} className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-sm font-bold text-gray-700">
-                        {index + 1}
-                      </span>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">{product.name}</p>
-                        <p className="text-xs text-gray-500">{product.sales} ventas</p>
+              {productosTop.length > 0 ? (
+                productosTop.map((product, index) => (
+                  <div key={index} className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-sm font-bold text-gray-700">
+                          {index + 1}
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{product.nombre}</p>
+                          <p className="text-xs text-gray-500">{product.ventas} ventas</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="mt-2 ml-10">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-gray-900">{product.revenue}</span>
-                        <span className="text-xs font-medium text-emerald-600">{product.trend}</span>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2">
-                        <div 
-                          className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-1.5 rounded-full" 
-                          style={{ width: `${Math.min(100, (product.sales / 6) * 100)}%` }}
-                        ></div>
+                      <div className="mt-2 ml-10">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-bold text-gray-900">${product.ingresos.toLocaleString()}</span>
+                          <span className="text-xs font-medium text-emerald-600">{product.tendencia}</span>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2">
+                          <div 
+                            className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-1.5 rounded-full" 
+                            style={{ width: `${Math.min(100, (product.ventas / Math.max(...productosTop.map(p => p.ventas), 1)) * 100)}%` }}
+                          ></div>
+                        </div>
                       </div>
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No hay datos de productos
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
