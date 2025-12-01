@@ -1,4 +1,4 @@
-import AltaCategorias from "@/src/components/categorias/alta-categorias/alta-categorias";
+import AltaCategorias from "@/components/categorias/alta-categorias/alta-categorias";
 
 export default function AltaCategoriasPage() {
     return <AltaCategorias />;

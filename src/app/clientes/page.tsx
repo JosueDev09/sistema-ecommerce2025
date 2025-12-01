@@ -1,4 +1,4 @@
-import ListaClientes from "@/src/components/clientes/lista-clientes/lista-clientes";
+import ListaClientes from "@/components/clientes/lista-clientes/lista-clientes";
 
 export default function ListaClientesPage() {
   return <ListaClientes />;

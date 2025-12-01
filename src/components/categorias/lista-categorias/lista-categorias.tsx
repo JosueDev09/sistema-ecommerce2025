@@ -2,7 +2,7 @@
 import { useState,useEffect } from "react";
 import { Search, Filter, Plus, Tag, Image, CheckCircle, XCircle, Eye, Edit, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { formatFecha } from "@/src/lib/formatFecha";
+import { formatFecha } from "@/lib/formatFecha";
 
 
 interface Categoria {

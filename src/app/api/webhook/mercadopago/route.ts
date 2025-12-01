@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Payment, MercadoPagoConfig } from 'mercadopago';
-import { db } from '@/src/lib/db';
+import { db } from '@/lib/db';
 
 // Configurar MercadoPago
 const client = new MercadoPagoConfig({ 

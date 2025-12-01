@@ -1,4 +1,4 @@
-import ListaProductos from "@/src/components/productos/lista-productos/lista-productos";
+import ListaProductos from "@/components/productos/lista-productos/lista-productos";
 
 export default function ListaProductosPage() {
   return <ListaProductos />;

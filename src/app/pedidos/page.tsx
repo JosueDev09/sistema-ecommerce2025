@@ -1,6 +1,6 @@
 'use client';
 
-import PedidosPage from "@/src/components/pedidos/pedidos";
+import PedidosPage from "@/components/pedidos/pedidos";
 
 
 export default function Pedidos() {

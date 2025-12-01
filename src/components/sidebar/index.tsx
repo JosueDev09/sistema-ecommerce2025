@@ -127,7 +127,7 @@ const routes = [
       },
       {
         name: "Movimientos",
-        path: "/inventario/movimientos",
+        path: "/inventario/movimientos/lista-movimiento",
         icon: <ArrowLeftRight size={18} />,
       },
        {

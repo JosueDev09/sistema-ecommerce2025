@@ -1,7 +1,7 @@
 "use client";
 import { use, useEffect, useState } from 'react';
 import { Search, Filter, Download, Plus, Eye, Edit, Trash2, User, Mail, Phone, Briefcase, Shield, Calendar, CheckCircle, XCircle } from 'lucide-react';
-import { formatFecha } from "@/src/lib/formatFecha";
+import { formatFecha } from "@/lib/formatFecha";
 
   interface Empleado {
     intEmpleado: number;

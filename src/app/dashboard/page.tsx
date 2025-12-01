@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { ShoppingCart, DollarSign, Package, Users, TrendingUp, TrendingDown, ArrowUpRight } from 'lucide-react';
-import { useDashboard } from '@/src/hooks/useDashboard';
+import { useDashboard } from '@/hooks/useDashboard';
 
 export default function Dashboard() {
   const [period, setPeriod] = useState('mes');

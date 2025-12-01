@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Search, Filter, Download, Plus, TrendingUp, TrendingDown, Package, Calendar, User, FileText, Eye, ArrowUpCircle, ArrowDownCircle, RefreshCw } from 'lucide-react';
-
+import { useRouter } from 'next/navigation';
 export default function MovimientosInventario() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState('todos');
   const [filterFecha, setFilterFecha] = useState('todos');
   const [showModal, setShowModal] = useState(false);
   const [selectedMovimiento, setSelectedMovimiento] = useState<any>(null);
+  const routes = useRouter();
 
   const movimientos = [
     {
@@ -193,7 +194,11 @@ export default function MovimientosInventario() {
               <Download className="w-5 h-5" />
               Exportar
             </button>
-            <button className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+            <button 
+            onClick={() => routes.push('/inventario/movimientos/alta-movimiento')}
+            className="flex items-center 
+            justify-center gap-2 px-6 py-3 
+            bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors">
               <Plus className="w-5 h-5" />
               Nuevo Movimiento
             </button>
