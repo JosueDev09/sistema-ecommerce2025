@@ -3,9 +3,9 @@
 import { useState, useEffect, use } from "react";
 import { Search, Filter, Plus, Package, CheckCircle, XCircle, Eye, Edit, Trash2, TrendingUp, AlertCircle, DollarSign, X, Tag, Percent, Calendar, Info, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { formatFecha } from "@/src/lib/formatFecha";
+import { formatFecha } from "@/lib/formatFecha";
 import SweetAlert from "sweetalert2";
-import { formatFechas } from "@/src/utils/formatearFechas";
+import { formatFechas } from "@/utils/formatearFechas";
 
 interface Producto {
   intProducto: number;
