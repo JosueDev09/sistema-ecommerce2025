@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, use } from 'react';
 import { Package, DollarSign, Tag, Image, X, Check, Upload, Plus, Trash2, Info, Percent, Calendar } from 'lucide-react';
-
+import Swal from 'sweetalert2';
 export default function AltaProductos() {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -165,8 +165,53 @@ export default function AltaProductos() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      const newImages = Array.from(files).map(file => URL.createObjectURL(file));
-      setImages(prev => [...prev, ...newImages]);
+      const fileArray = Array.from(files);
+      
+      // Validar cada archivo
+      for (const file of fileArray) {
+        // Validar tamaño (máximo 5MB por imagen)
+        if (file.size > 5 * 1024 * 1024) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Archivo muy grande',
+            text: `La imagen "${file.name}" supera los 5MB`,
+          });
+          return;
+        }
+
+        // Validar tipo
+        if (!file.type.startsWith('image/')) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Archivo inválido',
+            text: `"${file.name}" no es una imagen válida`,
+          });
+          return;
+        }
+      }
+
+      // Convertir todas las imágenes a Base64
+      const promises = fileArray.map(file => {
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      });
+
+      Promise.all(promises)
+        .then(base64Images => {
+          setImages(prev => [...prev, ...base64Images]);
+          console.log(`${base64Images.length} imagen(es) convertida(s) a Base64`);
+        })
+        .catch(() => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudieron procesar las imágenes',
+          });
+        });
     }
   };
 

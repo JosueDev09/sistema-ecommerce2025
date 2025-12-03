@@ -3,7 +3,7 @@ import { useState,useEffect } from "react";
 import { Search, Filter, Plus, Tag, Image, CheckCircle, XCircle, Eye, Edit, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatFecha } from "@/lib/formatFecha";
-
+import Swal from 'sweetalert2';
 
 interface Categoria {
   intCategoria: number;
@@ -21,6 +21,8 @@ export default function ListaCategorias() {
   const [filterStatus, setFilterStatus] = useState("todas");
   const router = useRouter();
  const [categorias, setCategorias] = useState<Categoria[]>([]);
+ const [selectedCategoria, setSelectedCategoria] = useState<Categoria | null>(null);
+ const [showDeleteModal, setShowDeleteModal] = useState(false);
 
  // 🔹 Obtener categorías desde GraphQL
   useEffect(() => {
@@ -57,6 +59,55 @@ export default function ListaCategorias() {
 
     fetchCategorias();
   }, []);
+
+  const confirmarEliminar = async () => {
+      if (!selectedCategoria) return;
+  
+      try {
+        const res = await fetch("/api/graphql", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: `
+              mutation EliminarCategoria($intCategoria: Int!) {
+                eliminarCategoria(intCategoria: $intCategoria)
+              }
+            `,
+            variables: {
+              intCategoria: selectedCategoria.intCategoria
+            }
+          }),
+        });
+  
+        const result = await res.json();
+        
+        if (result.errors) {
+          throw new Error(result.errors[0]?.message || 'Error al eliminar el producto');
+        }
+  
+        // Actualizar la lista de productos
+        setCategorias(categorias.filter(c => c.intCategoria !== selectedCategoria.intCategoria));
+        setShowDeleteModal(false);
+        setSelectedCategoria(null);
+        
+       Swal.fire({
+          icon: 'success',
+          title: 'Categoría eliminada exitosamente',
+          });
+      } catch (error) {
+        console.error("Error al eliminar categoría:", error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error al eliminar la categoría',
+          text: (error as Error).message,
+        });
+      }
+    };
+    // Función para eliminar
+  const handleEliminar = (categoria: Categoria) => {
+    setSelectedCategoria(categoria);
+    setShowDeleteModal(true);
+  };
 
   const filteredCategorias = categorias.filter((cat) => {
     const matchesSearch =
@@ -244,7 +295,9 @@ export default function ListaCategorias() {
                         <button className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                        <button
+                        onClick={() => handleEliminar(cat)} 
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </td>
@@ -255,6 +308,49 @@ export default function ListaCategorias() {
             </table>
           </div>
         </div>
+
+         {/* Modal de Confirmación de Eliminación */}
+        {showDeleteModal && selectedCategoria && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">Eliminar Producto</h3>
+                  <p className="text-gray-500 text-sm mt-1">Esta acción no se puede deshacer</p>
+                </div>
+              </div>
+
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-gray-700">
+                  ¿Estás seguro de que deseas eliminar la categoría{' '}
+                  <span className="font-bold text-gray-900">{selectedCategoria.strNombre}</span>?
+                </p>
+              
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={confirmarEliminar}
+                  className="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors"
+                >
+                  Sí, Eliminar
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setSelectedCategoria(null);
+                  }}
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

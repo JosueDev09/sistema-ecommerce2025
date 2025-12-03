@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { formatFecha } from "@/lib/formatFecha";
 import SweetAlert from "sweetalert2";
 import { formatFechas } from "@/utils/formatearFechas";
+import Swal from 'sweetalert2';
 
 interface Producto {
   intProducto: number;
@@ -195,6 +196,36 @@ export default function ListaProductos() {
     if (stock > 0)
       return { label: "Stock Bajo", color: "text-orange-700", bg: "bg-orange-100", icon: AlertCircle };
     return { label: "Agotado", color: "text-red-700", bg: "bg-red-100", icon: XCircle };
+  };
+
+  // Helper para obtener la primera imagen de un producto de forma segura
+  const getProductoImagen = (producto: Producto): string => {
+    try {
+      // Si tiene jsonImagenes, intentar parsearlo
+      if (producto.jsonImagenes) {
+        // Verificar si es una URL directa
+        if (producto.jsonImagenes.startsWith('http') || producto.jsonImagenes.startsWith('data:')) {
+          return producto.jsonImagenes;
+        }
+        // Intentar parsear como JSON
+        const parsed = JSON.parse(producto.jsonImagenes);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed[0];
+        }
+        if (typeof parsed === 'string') {
+          return parsed;
+        }
+      }
+      // Si tiene strImagen, usarla
+      if (producto.strImagen) {
+        return producto.strImagen;
+      }
+      // Imagen por defecto
+      return "/placeholder-product.png";
+    } catch (error) {
+      // Si hay error al parsear, intentar usar directamente
+      return producto.jsonImagenes || producto.strImagen || "/placeholder-product.png";
+    }
   };
 
   // Función para ver detalles
@@ -472,7 +503,7 @@ export default function ListaProductos() {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <img
-                              src={prod.jsonImagenes || "/placeholder-product.png"}
+                              src={getProductoImagen(prod)}
                               alt={prod.strNombre}
                               className="w-12 h-12 object-cover rounded-lg border border-gray-200"
                             />
@@ -630,15 +661,13 @@ export default function ListaProductos() {
                 </div>
 
                 {/* Imagen Principal */}
-                {selectedProducto.strImagen && (
-                  <div className="bg-gray-50 rounded-xl p-6">
-                    <img
-                      src={selectedProducto.strImagen}
-                      alt={selectedProducto.strNombre}
-                      className="w-full h-64 object-contain rounded-lg"
-                    />
-                  </div>
-                )}
+                <div className="bg-gray-50 rounded-xl p-6">
+                  <img
+                    src={getProductoImagen(selectedProducto)}
+                    alt={selectedProducto.strNombre}
+                    className="w-full h-64 object-contain rounded-lg"
+                  />
+                </div>
 
                 {/* Información Básica */}
                 <div className="bg-gray-50 rounded-xl p-4">
@@ -913,11 +942,55 @@ function ModalEdicion({
   const [formData, setFormData] = useState<Producto>(producto);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess,setShowSuccess] =useState(false);
+  
+  // Helper para parsear imágenes de forma segura
+  const parseImagesFromProduct = (prod: Producto): string[] => {
+    try {
+      // Si tiene jsonImagenes, intentar parsearlo
+      if (prod.jsonImagenes) {
+        // Verificar si ya es un string que comienza con 'http' (URL simple)
+        if (typeof prod.jsonImagenes === 'string' && prod.jsonImagenes.startsWith('http')) {
+          return [prod.jsonImagenes];
+        }
+        // Intentar parsear como JSON
+        const parsed = JSON.parse(prod.jsonImagenes);
+        return Array.isArray(parsed) ? parsed : [parsed];
+      }
+      // Si tiene strImagen, usarla
+      if (prod.strImagen) {
+        return [prod.strImagen];
+      }
+      // Si no tiene nada, array vacío
+      return [];
+    } catch (error) {
+      console.warn('Error al parsear imágenes:', error);
+      // Si falla el parse, intentar usar como string directo
+      if (prod.jsonImagenes) {
+        return [prod.jsonImagenes];
+      }
+      return prod.strImagen ? [prod.strImagen] : [];
+    }
+  };
+
+  // Helper para parsear variantes de forma segura
+  const parseVariantesFromProduct = (prod: Producto) => {
+    try {
+      if (prod.jsonVariantes) {
+        const parsed = JSON.parse(prod.jsonVariantes);
+        return Array.isArray(parsed) && parsed.length > 0 ? parsed : [{nombre: '', valor: ''}];
+      }
+      return [{nombre: '', valor: ''}];
+    } catch (error) {
+      console.warn('Error al parsear variantes:', error);
+      return [{nombre: '', valor: ''}];
+    }
+  };
+
   const [variantes, setVariantes] = useState<{nombre: string; valor: string}[]>(
-    producto.jsonVariantes ? JSON.parse(producto.jsonVariantes) : [{nombre: '', valor: ''}]
+    parseVariantesFromProduct(producto)
   );
   const [images, setImages] = useState<string[]>(
-    producto.jsonImagenes ? JSON.parse(producto.jsonImagenes) : producto.strImagen ? [producto.strImagen] : []
+    parseImagesFromProduct(producto)
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -951,8 +1024,50 @@ function ModalEdicion({
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      const newImages = Array.from(files).map(file => URL.createObjectURL(file));
-      setImages([...images, ...newImages]);
+      const fileArray = Array.from(files);
+      
+      // Validar cada archivo
+      for (const file of fileArray) {
+        if (file.size > 5 * 1024 * 1024) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Archivo muy grande',
+            text: `La imagen "${file.name}" supera los 5MB`,
+          });
+          return;
+        }
+
+        if (!file.type.startsWith('image/')) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Archivo inválido',
+            text: `"${file.name}" no es una imagen válida`,
+          });
+          return;
+        }
+      }
+
+      // Convertir a Base64
+      const promises = fileArray.map(file => {
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      });
+
+      Promise.all(promises)
+        .then(base64Images => {
+          setImages([...images, ...base64Images]);
+        })
+        .catch(() => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudieron procesar las imágenes',
+          });
+        });
     }
   };
 

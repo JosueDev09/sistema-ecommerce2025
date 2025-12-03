@@ -244,6 +244,11 @@ export const resolvers = {
       });
       return crearCategoria;
     },
+
+    eliminarCategoria: async (_: any, { intCategoria }: any) => {
+      await db.tbCategorias.delete({ where: { intCategoria } });
+      return true;
+    },
     crearProducto: async (_: any, { data }: any) => {
      // console.log('Datos recibidos para crear producto:', data);
       

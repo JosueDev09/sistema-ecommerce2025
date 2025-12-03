@@ -40,8 +40,41 @@ export default function AltaCategorias() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setImagen(url);
+      // Validar tamaño (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Archivo muy grande',
+          text: 'La imagen no debe superar los 5MB',
+        });
+        return;
+      }
+
+      // Validar tipo de archivo
+      if (!file.type.startsWith('image/')) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Archivo inválido',
+          text: 'Solo se permiten imágenes (PNG, JPG, JPEG, GIF, WebP)',
+        });
+        return;
+      }
+
+      // Convertir a Base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        console.log('Imagen convertida a Base64');
+        setImagen(base64String);
+      };
+      reader.onerror = () => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'No se pudo leer la imagen',
+        });
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -85,7 +118,7 @@ export default function AltaCategorias() {
                     strDescripcion: formData.descripcion,
                     strEstatus: formData.estado,
                     boolDestacado: formData.destacada,
-                    strImagen: formData.imagen,
+                    strImagen: imagen,
                   },
                 },
               }),
