@@ -9,6 +9,23 @@ export default function AltaProductos() {
   const [variantes, setVariantes] = useState([{ nombre: '', valor: '' }]);
   const [categorias, setCategorias] = useState<any[]>([]);
 
+  // ✨ NUEVO: Estados para variantes con stock
+  const [tieneVariantes, setTieneVariantes] = useState(false);
+  const [tallas, setTallas] = useState<string[]>([]);
+  const [colores, setColores] = useState<string[]>([]);
+  const [variantesStock, setVariantesStock] = useState<{
+    [key: string]: {
+      talla: string;
+      color: string;
+      stock: number;
+      sku: string;
+      precioAdicional: number;
+    }
+  }>({});
+  
+  const [nuevaTalla, setNuevaTalla] = useState('');
+  const [nuevoColor, setNuevoColor] = useState('');
+
   
   const [formData, setFormData] = useState({
     nombre: '',
@@ -162,56 +179,85 @@ export default function AltaProductos() {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
-      const fileArray = Array.from(files);
-      
-      // Validar cada archivo
-      for (const file of fileArray) {
-        // Validar tamaño (máximo 5MB por imagen)
-        if (file.size > 5 * 1024 * 1024) {
-          Swal.fire({
-            icon: 'error',
-            title: 'Archivo muy grande',
-            text: `La imagen "${file.name}" supera los 5MB`,
-          });
-          return;
-        }
-
-        // Validar tipo
-        if (!file.type.startsWith('image/')) {
-          Swal.fire({
-            icon: 'error',
-            title: 'Archivo inválido',
-            text: `"${file.name}" no es una imagen válida`,
-          });
-          return;
-        }
+    if (!files || files.length === 0) return;
+    
+    const fileArray = Array.from(files);
+    
+    // Validar cada archivo
+    for (const file of fileArray) {
+      // Validar tamaño (máximo 5MB por imagen)
+      if (file.size > 5 * 1024 * 1024) {
+        await Swal.fire({
+          icon: 'error',
+          title: 'Archivo muy grande',
+          text: `La imagen "${file.name}" supera los 5MB`,
+        });
+        return;
       }
 
-      // Convertir todas las imágenes a Base64
-      const promises = fileArray.map(file => {
-        return new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
+      // Validar tipo
+      if (!file.type.startsWith('image/')) {
+        await Swal.fire({
+          icon: 'error',
+          title: 'Archivo inválido',
+          text: `"${file.name}" no es una imagen válida`,
         });
+        return;
+      }
+    }
+
+    // Mostrar loading
+    Swal.fire({
+      title: 'Subiendo imágenes...',
+      text: `Subiendo ${fileArray.length} imagen(es)`,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    try {
+      // Subir todas las imágenes al servidor
+      const uploadPromises = fileArray.map(async (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('tipo', 'productos');
+
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error al subir ${file.name}`);
+        }
+
+        const result = await response.json();
+        return result.path; // Retorna la ruta: /uploads/productos/123456.jpg
       });
 
-      Promise.all(promises)
-        .then(base64Images => {
-          setImages(prev => [...prev, ...base64Images]);
-          console.log(`${base64Images.length} imagen(es) convertida(s) a Base64`);
-        })
-        .catch(() => {
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'No se pudieron procesar las imágenes',
-          });
-        });
+      const uploadedPaths = await Promise.all(uploadPromises);
+      
+      // Agregar las rutas al estado
+      setImages(prev => [...prev, ...uploadedPaths]);
+
+      await Swal.fire({
+        icon: 'success',
+        title: '¡Imágenes subidas!',
+        text: `Se subieron ${uploadedPaths.length} imagen(es) correctamente`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+
+    } catch (error) {
+      console.error('Error al subir imágenes:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error al subir imágenes',
+        text: 'Hubo un problema al subir las imágenes. Intenta de nuevo.',
+      });
     }
   };
 
@@ -231,6 +277,144 @@ export default function AltaProductos() {
     setVariantes(prev => prev.map((v, i) => 
       i === index ? { ...v, [field]: value } : v
     ));
+  };
+
+  // ✨ NUEVAS FUNCIONES PARA VARIANTES CON STOCK
+
+  // Agregar talla
+  const agregarTalla = () => {
+    if (nuevaTalla.trim() && !tallas.includes(nuevaTalla.trim())) {
+      const tallaNormalizada = nuevaTalla.trim().toUpperCase();
+      setTallas(prev => [...prev, tallaNormalizada]);
+      setNuevaTalla('');
+      
+      // Crear variantes para esta nueva talla con todos los colores existentes
+      if (colores.length > 0) {
+        const nuevasVariantes: any = {};
+        colores.forEach(color => {
+          const key = `${tallaNormalizada}-${color}`;
+          nuevasVariantes[key] = {
+            talla: tallaNormalizada,
+            color: color,
+            stock: 0,
+            sku: `${formData.sku}-${tallaNormalizada}-${color.substring(0, 3).toUpperCase()}`,
+            precioAdicional: 0
+          };
+        });
+        setVariantesStock(prev => ({ ...prev, ...nuevasVariantes }));
+      }
+    }
+  };
+
+  // Eliminar talla
+  const eliminarTalla = (talla: string) => {
+    setTallas(prev => prev.filter(t => t !== talla));
+    // Eliminar todas las variantes de esta talla
+    setVariantesStock(prev => {
+      const nuevas = { ...prev };
+      Object.keys(nuevas).forEach(key => {
+        if (nuevas[key].talla === talla) {
+          delete nuevas[key];
+        }
+      });
+      return nuevas;
+    });
+  };
+
+  // Agregar color
+  const agregarColor = () => {
+    if (nuevoColor.trim() && !colores.includes(nuevoColor.trim())) {
+      const colorNormalizado = nuevoColor.trim().charAt(0).toUpperCase() + nuevoColor.trim().slice(1).toLowerCase();
+      setColores(prev => [...prev, colorNormalizado]);
+      setNuevoColor('');
+      
+      // Crear variantes para este nuevo color con todas las tallas existentes
+      if (tallas.length > 0) {
+        const nuevasVariantes: any = {};
+        tallas.forEach(talla => {
+          const key = `${talla}-${colorNormalizado}`;
+          nuevasVariantes[key] = {
+            talla: talla,
+            color: colorNormalizado,
+            stock: 0,
+            sku: `${formData.sku}-${talla}-${colorNormalizado.substring(0, 3).toUpperCase()}`,
+            precioAdicional: 0
+          };
+        });
+        setVariantesStock(prev => ({ ...prev, ...nuevasVariantes }));
+      }
+    }
+  };
+
+  // Eliminar color
+  const eliminarColor = (color: string) => {
+    setColores(prev => prev.filter(c => c !== color));
+    // Eliminar todas las variantes de este color
+    setVariantesStock(prev => {
+      const nuevas = { ...prev };
+      Object.keys(nuevas).forEach(key => {
+        if (nuevas[key].color === color) {
+          delete nuevas[key];
+        }
+      });
+      return nuevas;
+    });
+  };
+
+  // Actualizar stock de una variante específica
+  const actualizarStockVariante = (talla: string, color: string, campo: 'stock' | 'precioAdicional', valor: number) => {
+    const key = `${talla}-${color}`;
+    setVariantesStock(prev => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        [campo]: valor
+      }
+    }));
+  };
+
+  // Calcular stock total de todas las variantes
+  const calcularStockTotal = () => {
+    return Object.values(variantesStock).reduce((total, variante) => total + variante.stock, 0);
+  };
+
+  // Generar todas las combinaciones automáticamente
+  const generarTodasLasVariantes = () => {
+    if (tallas.length === 0 || colores.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Faltan datos',
+        text: 'Debes agregar al menos una talla y un color',
+      });
+      return;
+    }
+
+    const nuevasVariantes: any = {};
+    tallas.forEach(talla => {
+      colores.forEach(color => {
+        const key = `${talla}-${color}`;
+        // Solo crear si no existe
+        if (!variantesStock[key]) {
+          nuevasVariantes[key] = {
+            talla,
+            color,
+            stock: 0,
+            sku: `${formData.sku}-${talla}-${color.substring(0, 3).toUpperCase()}`,
+            precioAdicional: 0
+          };
+        }
+      });
+    });
+    
+    setVariantesStock(prev => ({ ...prev, ...nuevasVariantes }));
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Variantes generadas',
+      text: `Se crearon ${Object.keys(nuevasVariantes).length} nuevas combinaciones`,
+      timer: 2000,
+      showConfirmButton: false
+    });
   };
 
   const validateForm = () => {
@@ -253,9 +437,46 @@ export default function AltaProductos() {
       return;
     }
 
+    // Validaciones específicas para variantes
+    if (tieneVariantes) {
+      if (tallas.length === 0 || colores.length === 0) {
+        await Swal.fire({
+          icon: 'warning',
+          title: 'Variantes incompletas',
+          text: 'Debes agregar al menos una talla y un color cuando el producto tiene variantes.',
+          confirmButtonColor: '#3B82F6'
+        });
+        return;
+      }
+
+      const stockTotal = calcularStockTotal();
+      if (stockTotal === 0) {
+        await Swal.fire({
+          icon: 'warning',
+          title: 'Sin stock',
+          text: 'Debes ingresar al menos una cantidad en las variantes.',
+          confirmButtonColor: '#3B82F6'
+        });
+        return;
+      }
+    }
+
     setIsLoading(true);
 
     try {
+      // Calcular stock total (de variantes o stock simple)
+      const stockTotal = tieneVariantes ? calcularStockTotal() : parseInt(formData.stock, 10);
+
+      // Preparar array de variantes para enviar
+      const variantesArray = tieneVariantes ? Object.entries(variantesStock).map(([key, variante]) => ({
+        strTalla: variante.talla,
+        strColor: variante.color,
+        intStock: variante.stock,
+        strSKU: variante.sku,
+        dblPrecioAdicional: variante.precioAdicional || 0,
+        strImagen: null // Podrías agregar imágenes por variante en el futuro
+      })) : [];
+
       // Preparar los datos para GraphQL
       const productData = {
         strNombre: formData.nombre,
@@ -264,9 +485,9 @@ export default function AltaProductos() {
         strDescripcion: formData.descripcionCorta,
         strDescripcionLarga: formData.descripcionLarga,
         dblPrecio: parseFloat(formData.precio),
-        intStock: parseInt(formData.stock, 10),
+        intStock: stockTotal, // Stock total calculado
         intStockMinimo: parseInt(formData.stockMinimo, 10) || null,
-        strImagen: images.length > 0 ? images[0] : null, // Primera imagen como principal
+        strImagen: images.length > 0 ? images[0] : null,
         bolActivo: formData.estado === 'activo',
         bolDestacado: formData.destacado,
         strEstado: formData.estado,
@@ -287,6 +508,9 @@ export default function AltaProductos() {
         
         // Categoría
         intCategoria: parseInt(formData.categoria, 10),
+        
+        // Variantes (nuevo campo)
+        variantes: variantesArray.length > 0 ? variantesArray : null
       };
 
       console.log('Datos a enviar:', productData);
@@ -308,6 +532,14 @@ export default function AltaProductos() {
                 tbCategoria {
                   strNombre
                 }
+                tbProductoVariantes {
+                  intVariante
+                  strTalla
+                  strColor
+                  intStock
+                  strSKU
+                  dblPrecioAdicional
+                }
               }
             }
           `,
@@ -328,36 +560,53 @@ export default function AltaProductos() {
         throw new Error('Error al crear el producto');
       }
 
-      // Mostrar mensaje de éxito
-      setShowSuccess(true);
+      // Mostrar mensaje de éxito con Sweet Alert
+      await Swal.fire({
+        icon: 'success',
+        title: '¡Producto creado!',
+        html: `
+          <div class="text-left">
+            <p class="mb-2"><strong>Producto:</strong> ${formData.nombre}</p>
+            <p class="mb-2"><strong>SKU:</strong> ${formData.sku || 'N/A'}</p>
+            <p class="mb-2"><strong>Stock Total:</strong> ${stockTotal} unidades</p>
+            ${tieneVariantes ? `<p class="mb-2"><strong>Variantes:</strong> ${variantesArray.length} combinaciones</p>` : ''}
+          </div>
+        `,
+        confirmButtonColor: '#3B82F6'
+      });
+
+      // Limpiar formulario
+      setFormData({
+        nombre: '',
+        sku: '',
+        categoria: '',
+        marca: '',
+        descripcionCorta: '',
+        descripcionLarga: '',
+        precio: '',
+        precioDescuento: '',
+        stock: '',
+        stockMinimo: '',
+        peso: '',
+        dimensiones: '',
+        estado: 'activo',
+        destacado: false,
+        etiquetas: '',
+        tieneDescuento: false,
+        porcentajeDescuento: '',
+        fechaInicioDescuento: '',
+        fechaFinDescuento: ''
+      });
+      setImages([]);
+      setVariantes([{ nombre: '', valor: '' }]);
       
-      // Limpiar formulario después de 2 segundos
-      setTimeout(() => {
-        setFormData({
-          nombre: '',
-          sku: '',
-          categoria: '',
-          marca: '',
-          descripcionCorta: '',
-          descripcionLarga: '',
-          precio: '',
-          precioDescuento: '',
-          stock: '',
-          stockMinimo: '',
-          peso: '',
-          dimensiones: '',
-          estado: 'activo',
-          destacado: false,
-          etiquetas: '',
-          tieneDescuento: false,
-          porcentajeDescuento: '',
-          fechaInicioDescuento: '',
-          fechaFinDescuento: ''
-        });
-        setImages([]);
-        setVariantes([{ nombre: '', valor: '' }]);
-        setShowSuccess(false);
-      }, 3000);
+      // Limpiar estados de variantes
+      setTieneVariantes(false);
+      setTallas([]);
+      setColores([]);
+      setVariantesStock({});
+      setNuevaTalla('');
+      setNuevoColor('');
 
     } catch(error) {
       console.error('Error al crear producto:', error);
@@ -794,50 +1043,310 @@ export default function AltaProductos() {
               </div>
             </div>
 
-            {/* Variantes */}
+            {/* Variantes con Stock */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
                   <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
                     <Tag className="w-5 h-5 text-purple-600" />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">Variantes</h2>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Variantes y Stock</h2>
+                    <p className="text-sm text-gray-600">Gestiona tallas, colores y stock por cada combinación</p>
+                  </div>
                 </div>
-                <button
-                  onClick={addVariante}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Agregar
-                </button>
+                
+                {/* Toggle para activar/desactivar variantes */}
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <span className="text-sm font-medium text-gray-700">
+                    {tieneVariantes ? 'Con variantes' : 'Sin variantes'}
+                  </span>
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={tieneVariantes}
+                      onChange={(e) => setTieneVariantes(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-14 h-8 bg-gray-200 rounded-full peer peer-checked:bg-purple-600 transition-colors"></div>
+                    <div className="absolute left-1 top-1 w-6 h-6 bg-white rounded-full transition-transform peer-checked:translate-x-6"></div>
+                  </div>
+                </label>
               </div>
 
-              <div className="space-y-3">
-                {variantes.map((variante, index) => (
-                  <div key={index} className="flex gap-3">
-                    <input
-                      type="text"
-                      value={variante.nombre}
-                      onChange={(e) => updateVariante(index, 'nombre', e.target.value)}
-                      className="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                      placeholder="Ej: Color"
-                    />
-                    <input
-                      type="text"
-                      value={variante.valor}
-                      onChange={(e) => updateVariante(index, 'valor', e.target.value)}
-                      className="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                      placeholder="Ej: Negro, Blanco, Azul"
-                    />
-                    <button
-                      onClick={() => removeVariante(index)}
-                      className="w-12 h-12 flex items-center justify-center rounded-lg hover:bg-red-50 text-red-600 transition-colors"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+              {tieneVariantes ? (
+                <div className="space-y-6">
+                  {/* Agregar Tallas */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      Tallas Disponibles
+                    </label>
+                    
+                    {/* Input para agregar talla */}
+                    <div className="flex gap-2 mb-3">
+                      <input
+                        type="text"
+                        value={nuevaTalla}
+                        onChange={(e) => setNuevaTalla(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && agregarTalla()}
+                        className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
+                        placeholder="Ej: S, M, L, XL, 28, 30, 32..."
+                      />
+                      <button
+                        type="button"
+                        onClick={agregarTalla}
+                        className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Agregar
+                      </button>
+                    </div>
+
+                    {/* Tallas agregadas */}
+                    <div className="flex flex-wrap gap-2">
+                      {tallas.length === 0 ? (
+                        <p className="text-sm text-gray-500 italic">No hay tallas agregadas</p>
+                      ) : (
+                        tallas.map(talla => (
+                          <span
+                            key={talla}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-medium"
+                          >
+                            {talla}
+                            <button
+                              type="button"
+                              onClick={() => eliminarTalla(talla)}
+                              className="hover:text-blue-900 transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </span>
+                        ))
+                      )}
+                    </div>
                   </div>
-                ))}
-              </div>
+
+                  {/* Agregar Colores */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      Colores Disponibles
+                    </label>
+                    
+                    {/* Input para agregar color */}
+                    <div className="flex gap-2 mb-3">
+                      <input
+                        type="text"
+                        value={nuevoColor}
+                        onChange={(e) => setNuevoColor(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && agregarColor()}
+                        className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                        placeholder="Ej: Rojo, Azul, Negro, Blanco..."
+                      />
+                      <button
+                        type="button"
+                        onClick={agregarColor}
+                        className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Agregar
+                      </button>
+                    </div>
+
+                    {/* Colores agregados */}
+                    <div className="flex flex-wrap gap-2">
+                      {colores.length === 0 ? (
+                        <p className="text-sm text-gray-500 italic">No hay colores agregados</p>
+                      ) : (
+                        colores.map(color => (
+                          <span
+                            key={color}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-100 text-cyan-700 rounded-lg font-medium"
+                          >
+                            {color}
+                            <button
+                              type="button"
+                              onClick={() => eliminarColor(color)}
+                              className="hover:text-cyan-900 transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </span>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Matriz de Stock (Grid de Tallas × Colores) */}
+                  {tallas.length > 0 && colores.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900">
+                            Stock por Variante
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            Ingresa las cantidades disponibles para cada combinación
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-600">Stock Total</p>
+                          <p className="text-2xl font-bold text-blue-600">{calcularStockTotal()}</p>
+                        </div>
+                      </div>
+
+                      {/* Grid de Stock */}
+                      <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                        <table className="w-full">
+                          <thead className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+                            <tr>
+                              <th className="px-4 py-3 text-left font-semibold sticky left-0 bg-purple-600 z-10">
+                                Talla
+                              </th>
+                              {colores.map(color => (
+                                <th key={color} className="px-4 py-3 text-center font-semibold min-w-[120px]">
+                                  <div className="flex flex-col items-center gap-1">
+                                    <span>{color}</span>
+                                  </div>
+                                </th>
+                              ))}
+                              <th className="px-4 py-3 text-center font-semibold bg-blue-700">
+                                Total
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {tallas.map(talla => {
+                              const totalTalla = colores.reduce((sum, color) => {
+                                const key = `${talla}-${color}`;
+                                return sum + (variantesStock[key]?.stock || 0);
+                              }, 0);
+
+                              return (
+                                <tr key={talla} className="hover:bg-gray-50 transition-colors">
+                                  <td className="px-4 py-3 font-semibold text-gray-900 sticky left-0 bg-white z-10 border-r border-gray-200">
+                                    <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold bg-blue-100 text-blue-700">
+                                      {talla}
+                                    </span>
+                                  </td>
+                                  {colores.map(color => {
+                                    const key = `${talla}-${color}`;
+                                    const variante = variantesStock[key];
+
+                                    return (
+                                      <td key={color} className="px-4 py-3">
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={variante?.stock || 0}
+                                          onChange={(e) => {
+                                            const valor = parseInt(e.target.value) || 0;
+                                            actualizarStockVariante(talla, color, 'stock', valor);
+                                          }}
+                                          onFocus={(e) => e.target.select()}
+                                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-center text-lg font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition hover:border-blue-400"
+                                          placeholder="0"
+                                        />
+                                      </td>
+                                    );
+                                  })}
+                                  <td className="px-4 py-3 text-center font-bold text-blue-600 bg-blue-50">
+                                    {totalTalla}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+
+                            {/* Fila de totales por color */}
+                            <tr className="bg-cyan-50 font-semibold">
+                              <td className="px-4 py-3 text-gray-900 sticky left-0 bg-cyan-100 z-10">
+                                Total
+                              </td>
+                              {colores.map(color => {
+                                const totalColor = tallas.reduce((sum, talla) => {
+                                  const key = `${talla}-${color}`;
+                                  return sum + (variantesStock[key]?.stock || 0);
+                                }, 0);
+
+                                return (
+                                  <td key={color} className="px-4 py-3 text-center text-cyan-700">
+                                    {totalColor}
+                                  </td>
+                                );
+                              })}
+                              <td className="px-4 py-3 text-center text-blue-700 bg-blue-100 text-lg font-bold">
+                                {calcularStockTotal()}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Información adicional */}
+                      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Info general */}
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-start gap-3">
+                            <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div className="text-sm text-blue-800">
+                              <p className="font-semibold mb-2">Cómo usar la matriz:</p>
+                              <ul className="list-disc list-inside space-y-1">
+                                <li>Escribe las cantidades directamente en cada celda</li>
+                                <li>Los totales se calculan automáticamente</li>
+                                <li>Click en el input para seleccionar todo el número</li>
+                                <li>Los SKUs se generan automáticamente al guardar</li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Estadísticas rápidas */}
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-start gap-3">
+                            <Package className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div className="text-sm text-blue-800">
+                              <p className="font-semibold mb-2">Resumen:</p>
+                              <ul className="space-y-1">
+                                <li><strong>{tallas.length}</strong> tallas disponibles</li>
+                                <li><strong>{colores.length}</strong> colores disponibles</li>
+                                <li><strong>{tallas.length * colores.length}</strong> combinaciones posibles</li>
+                                <li><strong>{Object.keys(variantesStock).length}</strong> variantes creadas</li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mensaje cuando no hay tallas o colores */}
+                  {(tallas.length === 0 || colores.length === 0) && (
+                    <div className="text-center py-8 px-4 border-2 border-dashed border-gray-300 rounded-lg">
+                      <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-600 font-medium">
+                        {tallas.length === 0 && colores.length === 0 && 'Agrega tallas y colores para comenzar'}
+                        {tallas.length === 0 && colores.length > 0 && 'Agrega al menos una talla para continuar'}
+                        {tallas.length > 0 && colores.length === 0 && 'Agrega al menos un color para continuar'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Modo sin variantes - Mensaje informativo */
+                <div className="text-center py-12 px-4">
+                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Tag className="w-10 h-10 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Producto sin variantes
+                  </h3>
+                  <p className="text-gray-600 max-w-md mx-auto">
+                    Este producto no tiene tallas ni colores. El stock se manejará de forma simple en el campo "Stock" de arriba.
+                  </p>
+                  <p className="text-sm text-gray-500 mt-3">
+                    Activa el switch de arriba si necesitas agregar variantes con stock individual.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Información Adicional */}

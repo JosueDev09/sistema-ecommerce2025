@@ -37,44 +37,74 @@ export default function AltaCategorias() {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // Validar tamaño (máximo 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Archivo muy grande',
-          text: 'La imagen no debe superar los 5MB',
-        });
-        return;
+    if (!file) return;
+
+    // Validar tamaño (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Archivo muy grande',
+        text: 'La imagen no debe superar los 5MB',
+      });
+      return;
+    }
+
+    // Validar tipo de archivo
+    if (!file.type.startsWith('image/')) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Archivo inválido',
+        text: 'Solo se permiten imágenes (PNG, JPG, JPEG, GIF, WebP)',
+      });
+      return;
+    }
+
+    // Mostrar loading
+    Swal.fire({
+      title: 'Subiendo imagen...',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    try {
+      // Subir imagen al servidor
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('tipo', 'categorias');
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al subir la imagen');
       }
 
-      // Validar tipo de archivo
-      if (!file.type.startsWith('image/')) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Archivo inválido',
-          text: 'Solo se permiten imágenes (PNG, JPG, JPEG, GIF, WebP)',
-        });
-        return;
-      }
+      const result = await response.json();
+      
+      // Guardar la ruta de la imagen
+      setImagen(result.path); // Ej: /uploads/categorias/123456.jpg
 
-      // Convertir a Base64
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        console.log('Imagen convertida a Base64');
-        setImagen(base64String);
-      };
-      reader.onerror = () => {
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'No se pudo leer la imagen',
-        });
-      };
-      reader.readAsDataURL(file);
+      await Swal.fire({
+        icon: 'success',
+        title: '¡Imagen subida!',
+        text: 'La imagen se subió correctamente',
+        timer: 2000,
+        showConfirmButton: false
+      });
+
+    } catch (error) {
+      console.error('Error al subir imagen:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudo subir la imagen. Intenta de nuevo.',
+      });
     }
   };
 

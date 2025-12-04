@@ -131,6 +131,21 @@ export const typeDefs = gql`
     datActualizacion: String!
     tbCategoria: Categoria!
     tbCreadoPor: Empleado
+    tbProductoVariantes: [ProductoVariante!]
+  }
+
+  type ProductoVariante {
+    intVariante: Int!
+    intProducto: Int!
+    strTalla: String!
+    strColor: String!
+    intStock: Int!
+    strSKU: String
+    dblPrecioAdicional: Float
+    strImagen: String
+    bolActivo: Boolean!
+    datCreacion: String!
+    datActualizacion: String!
   }
 
   type PedidoItem {
@@ -305,6 +320,16 @@ export const typeDefs = gql`
     
     intCategoria: Int!
     intCreadoPorId: Int
+    variantes: [ProductoVarianteInput!]
+  }
+
+  input ProductoVarianteInput {
+    strTalla: String!
+    strColor: String!
+    intStock: Int!
+    strSKU: String
+    dblPrecioAdicional: Float
+    strImagen: String
   }
  input ProductoUpdateInput {
     strNombre: String!
@@ -505,6 +530,14 @@ export const typeDefs = gql`
     # Productos
     obtenerProductos: [Producto!]!
     obtenerProducto(strNombre: String!): Producto
+    obtenerProductoPorId(intProducto: Int!): Producto
+    obtenerProductoConVariantes(intProducto: Int!): Producto
+
+    # Variantes
+    obtenerVariantesPorProducto(intProducto: Int!): [ProductoVariante!]!
+    obtenerVariante(intProducto: Int!, strTalla: String!, strColor: String!): ProductoVariante
+    obtenerVariantesPorTalla(intProducto: Int!, strTalla: String!): [ProductoVariante!]!
+    obtenerVariantesPorColor(intProducto: Int!, strColor: String!): [ProductoVariante!]!
 
     # Pedidos
     obtenerPedidos: [Pedido!]!

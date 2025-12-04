@@ -89,7 +89,8 @@ model tbProductos {
   dblPrecio           Float
   intStock            Int     @default(0)
   intStockMinimo      Int?
-  strImagen           String?
+ strImagen     String? @db.LongText
+  jsonImagenes  String? @db.LongText
   bolActivo           Boolean @default(true)
   bolDestacado        Boolean @default(false)
   strEstado           String  @default("activo")
@@ -106,7 +107,7 @@ model tbProductos {
   strDimensiones String?
   strEtiquetas   String?
   jsonVariantes  String? // JSON string para las variantes
-  jsonImagenes   String? // JSON string para múltiples imágenes
+
 
   datCreacion      DateTime @default(now())
   datActualizacion DateTime @updatedAt
@@ -117,7 +118,36 @@ model tbProductos {
   intCreadoPorId Int?
   tbCreadoPor    tbEmpleados? @relation("EmpleadoProductos", fields: [intCreadoPorId], references: [intEmpleado])
 
-  tbItemsPedido tbPedidosItems[]
+  tbItemsPedido       tbPedidosItems[]
+  tbProductoVariantes tbProductoVariantes[] // ✨ NUEVO: Relación con variantes
+}
+
+// ======================================================
+//  VARIANTES DE PRODUCTOS
+// ======================================================
+model tbProductoVariantes {
+  intVariante        Int      @id @default(autoincrement())
+  intProducto        Int
+  strTalla           String // "S", "M", "L", "XL", "XXL", etc.
+  strColor           String // "Rojo", "Azul", "Negro", "Blanco", etc.
+  intStock           Int      @default(0)
+  strSKU             String?  @unique // SKU único por variante: "PLAYERA-RED-XL"
+  dblPrecioAdicional Float?   @default(0) // Precio adicional si esta variante cuesta más
+  strImagen          String? // Imagen específica de esta variante (ej: foto del color)
+  bolActivo          Boolean  @default(true)
+  datCreacion        DateTime @default(now())
+  datActualizacion   DateTime @updatedAt
+
+  // Relación con producto padre
+  tbProducto tbProductos @relation(fields: [intProducto], references: [intProducto], onDelete: Cascade)
+  
+  // Relación inversa con items de pedidos
+  tbPedidosItems tbPedidosItems[]
+
+  @@unique([intProducto, strTalla, strColor]) // No permitir duplicados de la misma combinación
+  @@index([intProducto])
+  @@index([strTalla])
+  @@index([strColor])
 }
 
 // ======================================================
@@ -150,11 +180,21 @@ model tbPedidosItems {
   intPedidoItem     Int         @id @default(autoincrement())
   intPedido         Int
   intProducto       Int
+  intVariante       Int? // ✨ NUEVO: Referencia a la variante específica (opcional)
   intCantidad       Int         @default(1)
+  strTalla          String? // ✨ Mantener por compatibilidad/redundancia
+  strColor          String? // ✨ Mantener por compatibilidad/redundancia
   dblSubtotal       Float       @default(0)
   dblPrecioUnitario Float       @default(0)
-  tbPedido          tbPedidos   @relation(fields: [intPedido], references: [intPedido])
-  tbProducto        tbProductos @relation(fields: [intProducto], references: [intProducto])
+  
+  // Relaciones
+  tbPedido            tbPedidos            @relation(fields: [intPedido], references: [intPedido])
+  tbProducto          tbProductos          @relation(fields: [intProducto], references: [intProducto])
+  tbProductoVariante  tbProductoVariantes? @relation(fields: [intVariante], references: [intVariante]) // ✨ NUEVO
+  
+  @@index([intPedido])
+  @@index([intProducto])
+  @@index([intVariante])
 }
 
 enum EstadoPedido {

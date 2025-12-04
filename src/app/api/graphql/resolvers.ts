@@ -134,9 +134,139 @@ export const resolvers = {
             include: {
               tbCategoria: true,
               tbCreadoPor: true,
+              tbProductoVariantes: {
+            where: {
+              bolActivo: true,
+            },
+            orderBy: [
+              { strTalla: 'asc' },
+              { strColor: 'asc' }
+            ]
+          }
             },
           });
     },
+
+    // ✨ NUEVAS QUERIES PARA VARIANTES
+    obtenerProductoPorId: async (_: any, { intProducto }: any) => {
+      return await db.tbProductos.findUnique({
+        where: { intProducto },
+        include: {
+          tbCategoria: true,
+          tbCreadoPor: true,
+          tbProductoVariantes: {
+            where: {
+              bolActivo: true,
+            },
+            orderBy: [
+              { strTalla: 'asc' },
+              { strColor: 'asc' }
+            ]
+          }
+        },
+      });
+    },
+
+    obtenerProductoConVariantes: async (_: any, { intProducto }: any) => {
+      console.log('🔍 Obteniendo producto con variantes, ID:', intProducto);
+      
+      const producto = await db.tbProductos.findUnique({
+        where: { intProducto },
+        include: {
+          tbCategoria: true,
+          tbCreadoPor: true,
+          tbProductoVariantes: {
+            where: {
+              bolActivo: true,
+            },
+            orderBy: [
+              { strTalla: 'asc' },
+              { strColor: 'asc' }
+            ]
+          }
+        },
+      });
+
+      console.log('✅ Producto encontrado con', producto?.tbProductoVariantes?.length || 0, 'variantes');
+      return producto;
+    },
+
+    obtenerVariantesPorProducto: async (_: any, { intProducto }: any) => {
+      console.log('🎨 Obteniendo variantes del producto:', intProducto);
+      
+      const variantes = await db.tbProductoVariantes.findMany({
+        where: {
+          intProducto,
+          bolActivo: true,
+        },
+        orderBy: [
+          { strTalla: 'asc' },
+          { strColor: 'asc' }
+        ]
+      });
+
+      console.log('✅ Encontradas', variantes.length, 'variantes');
+      return variantes;
+    },
+
+    obtenerVariante: async (_: any, { intProducto, strTalla, strColor }: any) => {
+      console.log('🔍 Buscando variante específica:', { intProducto, strTalla, strColor });
+      
+      const variante = await db.tbProductoVariantes.findUnique({
+        where: {
+          intProducto_strTalla_strColor: {
+            intProducto,
+            strTalla,
+            strColor,
+          }
+        }
+      });
+
+      if (!variante) {
+        console.log('❌ Variante no encontrada');
+        return null;
+      }
+
+      console.log('✅ Variante encontrada con stock:', variante.intStock);
+      return variante;
+    },
+
+    obtenerVariantesPorTalla: async (_: any, { intProducto, strTalla }: any) => {
+      console.log('👕 Obteniendo variantes por talla:', { intProducto, strTalla });
+      
+      const variantes = await db.tbProductoVariantes.findMany({
+        where: {
+          intProducto,
+          strTalla,
+          bolActivo: true,
+        },
+        orderBy: {
+          strColor: 'asc'
+        }
+      });
+
+      console.log('✅ Encontradas', variantes.length, 'variantes de talla', strTalla);
+      return variantes;
+    },
+
+    obtenerVariantesPorColor: async (_: any, { intProducto, strColor }: any) => {
+      console.log('🎨 Obteniendo variantes por color:', { intProducto, strColor });
+      
+      const variantes = await db.tbProductoVariantes.findMany({
+        where: {
+          intProducto,
+          strColor,
+          bolActivo: true,
+        },
+        orderBy: {
+          strTalla: 'asc'
+        }
+      });
+
+      console.log('✅ Encontradas', variantes.length, 'variantes de color', strColor);
+      return variantes;
+    },
+
     obtenerDescuentoCodigo: async (_: any, {strCodigo}: any) => {
      // console.log("🔍 Buscando código de descuento:", strCodigo);
       
@@ -250,56 +380,121 @@ export const resolvers = {
       return true;
     },
     crearProducto: async (_: any, { data }: any) => {
-     // console.log('Datos recibidos para crear producto:', data);
-      
-      // Preparar los datos para la creación
-      const productData: any = {
-        strNombre: data.strNombre,
-        strSKU: data.strSKU || null,
-        strMarca: data.strMarca || null,
-        strDescripcion: data.strDescripcion || null,
-        strDescripcionLarga: data.strDescripcionLarga || null,
-        dblPrecio: parseFloat(data.dblPrecio),
-        intStock: parseInt(data.intStock),
-        intStockMinimo: data.intStockMinimo ? parseInt(data.intStockMinimo) : null,
-        strImagen: data.strImagen || null,
-        bolActivo: data.bolActivo !== undefined ? data.bolActivo : true,
-        bolDestacado: data.bolDestacado || false,
-        strEstado: data.strEstado || 'activo',
+      try {
+        console.log('📦 Datos recibidos para crear producto:', JSON.stringify(data, null, 2));
         
-        // Campos de descuento
-        bolTieneDescuento: data.bolTieneDescuento || false,
-        dblPrecioDescuento: data.dblPrecioDescuento ? parseFloat(data.dblPrecioDescuento) : null,
-        intPorcentajeDescuento: data.intPorcentajeDescuento ? parseInt(data.intPorcentajeDescuento) : null,
-        datInicioDescuento: data.datInicioDescuento ? new Date(data.datInicioDescuento) : null,
-        datFinDescuento: data.datFinDescuento ? new Date(data.datFinDescuento) : null,
+        // Eliminar campos que no deben estar
+        const { intProducto, datCreacion, datActualizacion, ...cleanData } = data;
         
-        // Campos adicionales
-        strPeso: data.strPeso || null,
-        strDimensiones: data.strDimensiones || null,
-        strEtiquetas: data.strEtiquetas || null,
-        jsonVariantes: data.jsonVariantes || null,
-        jsonImagenes: data.jsonImagenes || null,
+        // Validaciones básicas
+        if (!cleanData.strNombre || !cleanData.dblPrecio || !cleanData.intCategoria) {
+          throw new Error('Faltan campos obligatorios: nombre, precio o categoría');
+        }
         
-        // Relaciones
-        intCategoria: parseInt(data.intCategoria),
-      };
-      
-      // Agregar empleado creador si existe
-      // if (data.intCreadoPorId) {
-      //   productData.intCreadoPorId = parseInt(data.intCreadoPorId);
-      // }
-      
-      const nuevoProducto = await db.tbProductos.create({
-        data: productData,
-        include: { 
-          tbCategoria: true,
-          tbCreadoPor: true
-        },
-      });
-      
-      // console.log('Producto creado exitosamente:', nuevoProducto);
-      return nuevoProducto;
+        // Preparar los datos para la creación
+        const productData: any = {
+          strNombre: cleanData.strNombre,
+          strSKU: cleanData.strSKU || null,
+          strMarca: cleanData.strMarca || null,
+          strDescripcion: cleanData.strDescripcion || null,
+          strDescripcionLarga: cleanData.strDescripcionLarga || null,
+          dblPrecio: parseFloat(cleanData.dblPrecio),
+          intStock: parseInt(cleanData.intStock) || 0,
+          intStockMinimo: cleanData.intStockMinimo ? parseInt(cleanData.intStockMinimo) : null,
+          strImagen: cleanData.strImagen || null,
+          bolActivo: cleanData.bolActivo !== undefined ? cleanData.bolActivo : true,
+          bolDestacado: cleanData.bolDestacado || false,
+          strEstado: cleanData.strEstado || 'activo',
+          
+          // Campos de descuento
+          bolTieneDescuento: cleanData.bolTieneDescuento || false,
+          dblPrecioDescuento: cleanData.dblPrecioDescuento ? parseFloat(cleanData.dblPrecioDescuento) : null,
+          intPorcentajeDescuento: cleanData.intPorcentajeDescuento ? parseInt(cleanData.intPorcentajeDescuento) : null,
+          datInicioDescuento: cleanData.datInicioDescuento ? new Date(cleanData.datInicioDescuento) : null,
+          datFinDescuento: cleanData.datFinDescuento ? new Date(cleanData.datFinDescuento) : null,
+          
+          // Campos adicionales
+          strPeso: cleanData.strPeso || null,
+          strDimensiones: cleanData.strDimensiones || null,
+          strEtiquetas: cleanData.strEtiquetas || null,
+          jsonVariantes: cleanData.jsonVariantes || null,
+          jsonImagenes: cleanData.jsonImagenes || null,
+          
+          // Relaciones
+          intCategoria: parseInt(cleanData.intCategoria),
+        };
+        
+        console.log('✅ Datos preparados para crear:', JSON.stringify(productData, null, 2));
+        
+        // Si hay variantes, crear producto con variantes en una transacción
+        if (cleanData.variantes && Array.isArray(cleanData.variantes) && cleanData.variantes.length > 0) {
+          console.log('🎨 Creando producto con', cleanData.variantes.length, 'variantes');
+          
+          return await db.$transaction(async (tx) => {
+            // 1. Crear el producto
+            const nuevoProducto = await tx.tbProductos.create({
+              data: productData,
+              include: { 
+                tbCategoria: true,
+                tbCreadoPor: true
+              },
+            });
+
+            //console.log('✅ Producto creado con ID:', nuevoProducto.intProducto);
+
+            // 2. Crear las variantes
+            const variantesData = cleanData.variantes
+              .filter((v: any) => v.intStock > 0) // Solo crear variantes con stock
+              .map((v: any) => ({
+                intProducto: nuevoProducto.intProducto,
+                strTalla: v.strTalla,
+                strColor: v.strColor,
+                intStock: parseInt(v.intStock) || 0,
+                strSKU: v.strSKU || null,
+                dblPrecioAdicional: v.dblPrecioAdicional ? parseFloat(v.dblPrecioAdicional) : 0,
+                strImagen: v.strImagen || null,
+                bolActivo: true,
+              }));
+
+           // console.log('🎨 Creando', variantesData.length, 'variantes con stock');
+
+            if (variantesData.length > 0) {
+              await tx.tbProductoVariantes.createMany({
+                data: variantesData
+              });
+            //  console.log('✅ Variantes creadas exitosamente');
+            }
+
+            // 3. Retornar producto con variantes
+            return await tx.tbProductos.findUnique({
+              where: { intProducto: nuevoProducto.intProducto },
+              include: { 
+                tbCategoria: true,
+                tbCreadoPor: true,
+                tbProductoVariantes: true
+              },
+            });
+          });
+        }
+        
+      //  console.log('📦 Creando producto sin variantes');
+        
+        // Si no hay variantes, crear producto normal
+        const nuevoProducto = await db.tbProductos.create({
+          data: productData,
+          include: { 
+            tbCategoria: true,
+            tbCreadoPor: true
+          },
+        });
+        
+      //  console.log('✅ Producto creado exitosamente con ID:', nuevoProducto.intProducto);
+        return nuevoProducto;
+        
+      } catch (error) {
+        console.error('❌ Error al crear producto:', error);
+        throw error;
+      }
     },
 
     actualizarProducto: async (_: any, { intProducto,data }: any) => {
@@ -558,6 +753,8 @@ export const resolvers = {
                 intCantidad: item.intCantidad,
                 dblPrecioUnitario: item.dblSubtotal / item.intCantidad,
                 dblSubtotal: item.dblSubtotal,
+                strTalla: item.strTalla,
+                strColor: item.strColor,
               },
             });
 
