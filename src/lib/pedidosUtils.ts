@@ -15,6 +15,13 @@ export interface StatusConfig {
   icon: any;
 }
 
+export interface StatusConfigPago {
+  label: string;
+  color: string;
+  bg: string;
+  icon: any;
+}
+
 export const getStatusConfig = (status: string): StatusConfig => {
   const configs: Record<string, StatusConfig> = {
     PENDIENTE: { 
@@ -57,6 +64,42 @@ export const getStatusConfig = (status: string): StatusConfig => {
   return configs[status] || configs.PENDIENTE;
 };
 
+export const getStatusConfigPago = (status: string): StatusConfigPago => {
+  const configs: Record<string, StatusConfigPago> = {
+    PENDIENTE: { 
+      label: 'Pendiente', 
+      color: 'text-orange-700', 
+      bg: 'bg-orange-100', 
+      icon: Package 
+    },
+    PAGADO: { 
+      label: 'Pagado', 
+      color: 'text-green-700', 
+      bg: 'bg-green-100', 
+      icon: CheckCircle 
+    },
+    RECHAZADO: { 
+      label: 'Rechazado', 
+      color: 'text-red-700',
+      bg: 'bg-red-100', 
+      icon: XCircle 
+    },
+    CANCELADO: { 
+      label: 'Cancelado', 
+      color: 'text-red-700', 
+      bg: 'bg-red-100', 
+      icon: XCircle 
+    },
+    REMBOLSADO: {
+      label: 'Reembolsado',
+      color: 'text-purple-700',
+      bg: 'bg-purple-100',
+      icon: XCircle
+    }
+  };
+  return configs[status] || configs.PENDIENTE;
+};
+
 // Mapeo de estados para filtros
 export const STATUS_FILTERS = [
   { value: 'todos', label: 'Todos' },
@@ -67,3 +110,4 @@ export const STATUS_FILTERS = [
   { value: 'ENTREGADO', label: 'Entregado' },
   { value: 'CANCELADO', label: 'Cancelado' }
 ];
+

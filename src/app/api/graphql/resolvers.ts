@@ -1231,7 +1231,7 @@ export const resolvers = {
           // Mapear estados de MercadoPago a tu sistema
           const mapearEstado = (status: string) => {
             const mapa: Record<string, string> = {
-              'approved': 'APROBADO',
+              'approved': 'PAGADO',
               'rejected': 'RECHAZADO',
               'pending': 'PENDIENTE',
               'in_process': 'PENDIENTE',
@@ -1375,7 +1375,7 @@ export const resolvers = {
         let estadoPedido: any = "PROCESANDO";
         let estadoPago: any = "PENDIENTE";
         
-        if (strEstado === "APROBADO" || strEstado === "approved") {
+        if (strEstado === "PAGADO" || strEstado === "approved") {
           estadoPedido = "PROCESANDO";  // Pago aprobado, listo para procesar
           estadoPago = "PAGADO";  // Pago confirmado
         } else if (strEstado === "RECHAZADO" || strEstado === "rejected") {

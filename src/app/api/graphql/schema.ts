@@ -154,6 +154,8 @@ export const typeDefs = gql`
     dblSubtotal: Float!
     tbProducto: Producto!
     jsonImagenes: String
+    strTalla: String
+    strColor: String
   }
 
   type Pedido {
@@ -173,6 +175,7 @@ export const typeDefs = gql`
     tbDirecciones: Direccion
     tbItems: [PedidoItem!]  # ✨ Permitir array null (sin el !)
     tbPagos: Pago
+    strNumeroSeguimiento: String
 }
 
   type Direccion {
@@ -371,13 +374,17 @@ export const typeDefs = gql`
     dblTotal: Float!
     strMetodoEnvio: String!        # ✨ NUEVO: "express" | "estandar" | "recoger"
     strNotasEnvio: String          # ✨ NUEVO
+    strNumeroSeguimiento: String  # ✨ NUEVO
     items: [PedidoItemInput!]!
+
 }
 
   input PedidoItemInput {
     intProducto: Int!
     intCantidad: Int!
     dblSubtotal: Float!
+    strTalla: String
+    strColor: String
   }
 
   input TarjetaInput {
@@ -591,7 +598,7 @@ export const typeDefs = gql`
 
     # Pedidos
     crearPedido(data: PedidoInput!): Pedido!
-    actualizarEstadoPedido(intPedido: Int!, strEstado: EstadoPedido!): Pedido!
+    actualizarEstadoPedido(intPedido: Int!, strEstado: EstadoPedido!, strNumeroSeguimiento: String): Pedido!
     eliminarPedido(intPedido: Int!): Boolean!
 
     # Direcciones

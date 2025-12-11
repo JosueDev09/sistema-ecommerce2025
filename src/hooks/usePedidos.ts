@@ -61,6 +61,7 @@ export interface Pedido {
   tbDirecciones?: Direccion;
   tbItems?: PedidoItem[];  // ✨ Ahora es opcional
   tbPagos?: Pago;
+  strNumeroSeguimiento?: string;
 }
 
 interface UsePedidosReturn {
@@ -79,7 +80,7 @@ interface UsePedidosReturn {
   setSelectedOrder: (order: Pedido | null) => void;
   setShowModal: (show: boolean) => void;
   openOrderDetail: (pedido: Pedido) => void;
-  actualizarEstadoPedido: (intPedido: number, nuevoEstado: EstadoPedido) => Promise<boolean>;
+  actualizarEstadoPedido: (intPedido: number, nuevoEstado: EstadoPedido, strNumeroSeguimiento?: string) => Promise<boolean>;
   refetch: () => Promise<void>;
 }
 
@@ -214,15 +215,16 @@ export function usePedidos(): UsePedidosReturn {
     };
   }, [pedidos]);
 
-  const actualizarEstadoPedido = async (intPedido: number, nuevoEstado: EstadoPedido): Promise<boolean> => {
+  const actualizarEstadoPedido = async (intPedido: number, nuevoEstado: EstadoPedido, strNumeroSeguimiento?: string): Promise<boolean> => {
     try {
       setUpdatingStatus(true);
       
       const MUTATION_ACTUALIZAR_ESTADO = `
-        mutation ActualizarEstadoPedido($intPedido: Int!, $strEstado: EstadoPedido!) {
-          actualizarEstadoPedido(intPedido: $intPedido, strEstado: $strEstado) {
+        mutation ActualizarEstadoPedido($intPedido: Int!, $strEstado: EstadoPedido!, $strNumeroSeguimiento: String) {
+          actualizarEstadoPedido(intPedido: $intPedido, strEstado: $strEstado, strNumeroSeguimiento: $strNumeroSeguimiento) {
             intPedido
             strEstado
+            strNumeroSeguimiento
             datActualizacion
           }
         }

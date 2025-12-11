@@ -1,8 +1,9 @@
 import { Search, Filter, Download, Eye, Package, Truck, CheckCircle, Clock, XCircle, User, MapPin } from 'lucide-react';
 import { usePedidos, type Pedido } from '../../hooks/usePedidos';
-import { getStatusConfig, STATUS_FILTERS, type EstadoPedido } from '../../lib/pedidosUtils';
+import { getStatusConfig, STATUS_FILTERS, type EstadoPedido,getStatusConfigPago } from '../../lib/pedidosUtils';
 import { formatFecha } from '../../lib/formatFecha';
 import { useState } from 'react';
+import Swal from 'sweetalert2';
 
 export default function PedidosPage() {
   const {
@@ -25,17 +26,22 @@ export default function PedidosPage() {
   const [showEstadoModal, setShowEstadoModal] = useState(false);
   const [nuevoEstado, setNuevoEstado] = useState<EstadoPedido | ''>('');
   const [activeTab, setActiveTab] = useState<'info' | 'productos'>('info');
+  const [strNumeroSeguimiento, setStrNumeroSeguimiento] = useState<string>('');
 
   const handleActualizarEstado = async () => {
     if (!selectedOrder || !nuevoEstado) return;
     
-    const success = await actualizarEstadoPedido(selectedOrder.intPedido, nuevoEstado as EstadoPedido);
+    const success = await actualizarEstadoPedido(selectedOrder.intPedido, nuevoEstado as EstadoPedido,selectedOrder.strNumeroSeguimiento);
     
     if (success) {
       setShowEstadoModal(false);
       setNuevoEstado('');
       // Mostrar mensaje de éxito (opcional)
-      alert('Estado actualizado correctamente');
+      Swal.fire({
+        icon: 'success',
+        title: 'Éxito',
+        text: 'El estado del pedido ha sido actualizado correctamente.',
+      });
     } else {
       alert('Error al actualizar el estado');
     }
@@ -180,7 +186,7 @@ export default function PedidosPage() {
               <tbody className="divide-y divide-gray-100">
                 {filteredPedidos.map((pedido) => {
                   const statusConfig = getStatusConfig(pedido.strEstado);
-                  const statusPagoConfig = getStatusConfig(pedido.strEstadoPago);
+                  const statusPagoConfig = getStatusConfigPago(pedido.strEstadoPago);
                   const StatusIcon = statusConfig.icon;
                   const StatusPagoIcon = statusPagoConfig.icon;
                   
@@ -203,13 +209,13 @@ export default function PedidosPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${statusConfig.bg} ${statusConfig.color}`}>
-                          <StatusPagoIcon className="w-3.5 h-3.5" />
+                          <StatusIcon className="w-3.5 h-3.5" />
                           {statusConfig.label}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${statusPagoConfig.bg} ${statusPagoConfig.color}`}>
-                          <StatusIcon className="w-3.5 h-3.5" />
+                          <StatusPagoIcon className="w-3.5 h-3.5" />
                           {statusPagoConfig.label}
                         </span>
                       </td>
@@ -456,6 +462,20 @@ export default function PedidosPage() {
                   <option value="CANCELADO">Cancelado</option>
                 </select>
               </div>
+
+              { nuevoEstado === 'ENVIADO' && (
+                <div className="mb-6 p-4 ">
+                  <input
+                    type="text"
+                    value={strNumeroSeguimiento}
+                    onChange={(e) => setStrNumeroSeguimiento(e.target.value)}
+                    placeholder="Número de seguimiento"
+                    className="w-full px-4 py-2.5 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent outline-none"
+                  />
+                </div>
+              )}
+
+              
 
               <div className="flex gap-3">
                 <button

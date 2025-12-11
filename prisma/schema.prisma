@@ -89,8 +89,8 @@ model tbProductos {
   dblPrecio           Float
   intStock            Int     @default(0)
   intStockMinimo      Int?
- strImagen     String? @db.LongText
-  jsonImagenes  String? @db.LongText
+  strImagen     String? @db.Text
+  jsonImagenes  String? @db.Text
   bolActivo           Boolean @default(true)
   bolDestacado        Boolean @default(false)
   strEstado           String  @default("activo")
@@ -166,6 +166,7 @@ model tbPedidos {
   strNotasEnvio    String? // ✨ NUEVO: Notas adicionales de envío
   datPedido        DateTime       @default(now())
   datActualizacion DateTime       @updatedAt
+  strNumeroSeguimiento String? // ✨ NUEVO: Número de seguimiento del envío
 
   tbClientes    tbClientes       @relation(fields: [intCliente], references: [intCliente])
   tbDirecciones tbDirecciones?   @relation(fields: [intDireccion], references: [intDireccion]) // ✨ NUEVO
