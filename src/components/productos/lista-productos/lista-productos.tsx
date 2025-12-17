@@ -943,6 +943,96 @@ function ModalEdicion({
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess,setShowSuccess] =useState(false);
   
+  // Estados para el sistema de variantes con stock
+  const [tieneVariantes, setTieneVariantes] = useState(false);
+  const [tallas, setTallas] = useState<string[]>([]);
+  const [colores, setColores] = useState<string[]>([]);
+  const [nuevaTalla, setNuevaTalla] = useState('');
+  const [nuevoColor, setNuevoColor] = useState('');
+  const [variantesStock, setVariantesStock] = useState<{
+    [key: string]: { stock: number; sku?: string };
+  }>({});
+  const [cargandoVariantes, setCargandoVariantes] = useState(true);
+
+  // 🔹 Cargar variantes existentes desde la BD
+  useEffect(() => {
+    const cargarVariantes = async () => {
+      if (!producto.intProducto) return;
+
+      try {
+        setCargandoVariantes(true);
+        const res = await fetch("/api/graphql", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: `
+              query ObtenerVariantesPorProducto($intProducto: Int!) {
+                obtenerVariantesPorProducto(intProducto: $intProducto) {
+                  intProductoVariante
+                  strTalla
+                  strColor
+                  intStock
+                  strSKU
+                  bolActivo
+                }
+              }
+            `,
+            variables: {
+              intProducto: producto.intProducto
+            }
+          }),
+        });
+
+        const result = await res.json();
+        
+        if (result.data?.obtenerVariantesPorProducto) {
+          const variantes = result.data.obtenerVariantesPorProducto;
+          
+          if (variantes.length > 0) {
+            // Activar el modo variantes
+            setTieneVariantes(true);
+
+            // Extraer tallas únicas con tipado correcto
+            const tallasSet = new Set<string>();
+            variantes.forEach((v: any) => tallasSet.add(String(v.strTalla)));
+            const tallasUnicas = Array.from(tallasSet);
+            setTallas(tallasUnicas);
+
+            // Extraer colores únicos con tipado correcto
+            const coloresSet = new Set<string>();
+            variantes.forEach((v: any) => coloresSet.add(String(v.strColor)));
+            const coloresUnicos = Array.from(coloresSet);
+            setColores(coloresUnicos);
+
+            // Construir objeto de variantes con stock
+            const variantesMap: { [key: string]: { stock: number; sku?: string } } = {};
+            variantes.forEach((v: any) => {
+              const key = `${v.strTalla}-${v.strColor}`;
+              variantesMap[key] = {
+                stock: v.intStock || 0,
+                sku: v.strSKU
+              };
+            });
+            setVariantesStock(variantesMap);
+
+            console.log('✅ Variantes cargadas:', {
+              tallas: tallasUnicas,
+              colores: coloresUnicos,
+              total: variantes.length,
+              stock: variantesMap
+            });
+          }
+        }
+      } catch (error) {
+        console.error("❌ Error al cargar variantes:", error);
+      } finally {
+        setCargandoVariantes(false);
+      }
+    };
+
+    cargarVariantes();
+  }, [producto.intProducto]);
+  
   // Helper para parsear imágenes de forma segura
   const parseImagesFromProduct = (prod: Producto): string[] => {
     try {
@@ -992,6 +1082,63 @@ function ModalEdicion({
   const [images, setImages] = useState<string[]>(
     parseImagesFromProduct(producto)
   );
+
+  // Funciones para gestionar tallas
+  const agregarTalla = () => {
+    if (nuevaTalla.trim() && !tallas.includes(nuevaTalla.trim().toUpperCase())) {
+      setTallas([...tallas, nuevaTalla.trim().toUpperCase()]);
+      setNuevaTalla('');
+    }
+  };
+
+  const eliminarTalla = (talla: string) => {
+    setTallas(tallas.filter(t => t !== talla));
+    // Limpiar variantes de esta talla
+    const nuevasVariantes = { ...variantesStock };
+    Object.keys(nuevasVariantes).forEach(key => {
+      if (key.startsWith(talla + '-')) {
+        delete nuevasVariantes[key];
+      }
+    });
+    setVariantesStock(nuevasVariantes);
+  };
+
+  // Funciones para gestionar colores
+  const agregarColor = () => {
+    if (nuevoColor.trim() && !colores.includes(nuevoColor.trim())) {
+      setColores([...colores, nuevoColor.trim()]);
+      setNuevoColor('');
+    }
+  };
+
+  const eliminarColor = (color: string) => {
+    setColores(colores.filter(c => c !== color));
+    // Limpiar variantes de este color
+    const nuevasVariantes = { ...variantesStock };
+    Object.keys(nuevasVariantes).forEach(key => {
+      if (key.endsWith('-' + color)) {
+        delete nuevasVariantes[key];
+      }
+    });
+    setVariantesStock(nuevasVariantes);
+  };
+
+  // Actualizar stock de variante
+  const actualizarStockVariante = (talla: string, color: string, campo: string, valor: number) => {
+    const key = `${talla}-${color}`;
+    setVariantesStock(prev => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        [campo]: valor
+      }
+    }));
+  };
+
+  // Calcular stock total de todas las variantes
+  const calcularStockTotal = () => {
+    return Object.values(variantesStock).reduce((sum, variante) => sum + (variante.stock || 0), 0);
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -1641,49 +1788,331 @@ function ModalEdicion({
             </div>
 
             {/* Variantes */}
-            <div className="bg-white border-2 border-gray-100 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                  <Tag className="w-5 h-5 text-purple-600" />
-                  Variantes del Producto
-                </h3>
-                <button
-                  type="button"
-                  onClick={addVariante}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Agregar
-                </button>
+           
+
+            {/* Sistema de Variantes con Stock (Nuevo) */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                    {cargandoVariantes ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
+                    ) : (
+                      <Tag className="w-5 h-5 text-purple-600" />
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Variantes y Stock
+                      {cargandoVariantes && <span className="text-sm font-normal text-gray-500 ml-2">(Cargando...)</span>}
+                    </h2>
+                    <p className="text-sm text-gray-600">Gestiona tallas, colores y stock por cada combinación</p>
+                  </div>
+                </div>
+                
+                {/* Toggle para activar/desactivar variantes */}
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <span className="text-sm font-medium text-gray-700">
+                    {tieneVariantes ? 'Con variantes' : 'Sin variantes'}
+                  </span>
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={tieneVariantes}
+                      onChange={(e) => setTieneVariantes(e.target.checked)}
+                      className="sr-only peer"
+                      disabled={cargandoVariantes}
+                    />
+                    <div className="w-14 h-8 bg-gray-200 rounded-full peer peer-checked:bg-purple-600 transition-colors peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
+                    <div className="absolute left-1 top-1 w-6 h-6 bg-white rounded-full transition-transform peer-checked:translate-x-6"></div>
+                  </div>
+                </label>
               </div>
 
-              <div className="space-y-3">
-                {variantes.map((variante, index) => (
-                  <div key={index} className="flex gap-3">
-                    <input
-                      type="text"
-                      value={variante.nombre}
-                      onChange={(e) => updateVariante(index, 'nombre', e.target.value)}
-                      className="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                      placeholder="Ej: Color"
-                    />
-                    <input
-                      type="text"
-                      value={variante.valor}
-                      onChange={(e) => updateVariante(index, 'valor', e.target.value)}
-                      className="flex-1 px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                      placeholder="Ej: Negro, Blanco, Azul"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeVariante(index)}
-                      className="w-12 h-12 flex items-center justify-center rounded-lg hover:bg-red-50 text-red-600 transition-colors"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+              {tieneVariantes ? (
+                <div className="space-y-6">
+                  {/* Mensaje de variantes cargadas */}
+                  {!cargandoVariantes && tallas.length > 0 && colores.length > 0 && (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-emerald-800">
+                        <p className="font-semibold mb-1">✅ Variantes cargadas desde la base de datos</p>
+                        <p>Se encontraron <strong>{tallas.length} tallas</strong> y <strong>{colores.length} colores</strong> con un total de <strong>{Object.keys(variantesStock).length} combinaciones</strong>.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Agregar Tallas */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      Tallas Disponibles
+                    </label>
+                    
+                    {/* Input para agregar talla */}
+                    <div className="flex gap-2 mb-3">
+                      <input
+                        type="text"
+                        value={nuevaTalla}
+                        onChange={(e) => setNuevaTalla(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && agregarTalla()}
+                        className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition"
+                        placeholder="Ej: S, M, L, XL, 28, 30, 32..."
+                      />
+                      <button
+                        type="button"
+                        onClick={agregarTalla}
+                        className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Agregar
+                      </button>
+                    </div>
+
+                    {/* Tallas agregadas */}
+                    <div className="flex flex-wrap gap-2">
+                      {tallas.length === 0 ? (
+                        <p className="text-sm text-gray-500 italic">No hay tallas agregadas</p>
+                      ) : (
+                        tallas.map(talla => (
+                          <span
+                            key={talla}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-medium"
+                          >
+                            {talla}
+                            <button
+                              type="button"
+                              onClick={() => eliminarTalla(talla)}
+                              className="hover:text-blue-900 transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </span>
+                        ))
+                      )}
+                    </div>
                   </div>
-                ))}
-              </div>
+
+                  {/* Agregar Colores */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      Colores Disponibles
+                    </label>
+                    
+                    {/* Input para agregar color */}
+                    <div className="flex gap-2 mb-3">
+                      <input
+                        type="text"
+                        value={nuevoColor}
+                        onChange={(e) => setNuevoColor(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && agregarColor()}
+                        className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                        placeholder="Ej: Rojo, Azul, Negro, Blanco..."
+                      />
+                      <button
+                        type="button"
+                        onClick={agregarColor}
+                        className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Agregar
+                      </button>
+                    </div>
+
+                    {/* Colores agregados */}
+                    <div className="flex flex-wrap gap-2">
+                      {colores.length === 0 ? (
+                        <p className="text-sm text-gray-500 italic">No hay colores agregados</p>
+                      ) : (
+                        colores.map(color => (
+                          <span
+                            key={color}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-cyan-100 text-cyan-700 rounded-lg font-medium"
+                          >
+                            {color}
+                            <button
+                              type="button"
+                              onClick={() => eliminarColor(color)}
+                              className="hover:text-cyan-900 transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </span>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Matriz de Stock (Grid de Tallas × Colores) */}
+                  {tallas.length > 0 && colores.length > 0 && (
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900">
+                            Stock por Variante
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            Ingresa las cantidades disponibles para cada combinación
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-600">Stock Total</p>
+                          <p className="text-2xl font-bold text-blue-600">{calcularStockTotal()}</p>
+                        </div>
+                      </div>
+
+                      {/* Grid de Stock */}
+                      <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                        <table className="w-full">
+                          <thead className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+                            <tr>
+                              <th className="px-4 py-3 text-left font-semibold sticky left-0 bg-purple-600 z-10">
+                                Talla
+                              </th>
+                              {colores.map(color => (
+                                <th key={color} className="px-4 py-3 text-center font-semibold min-w-[120px]">
+                                  <div className="flex flex-col items-center gap-1">
+                                    <span>{color}</span>
+                                  </div>
+                                </th>
+                              ))}
+                              <th className="px-4 py-3 text-center font-semibold bg-blue-700">
+                                Total
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {tallas.map(talla => {
+                              const totalTalla = colores.reduce((sum, color) => {
+                                const key = `${talla}-${color}`;
+                                return sum + (variantesStock[key]?.stock || 0);
+                              }, 0);
+
+                              return (
+                                <tr key={talla} className="hover:bg-gray-50 transition-colors">
+                                  <td className="px-4 py-3 font-semibold text-gray-900 sticky left-0 bg-white z-10 border-r border-gray-200">
+                                    <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold bg-blue-100 text-blue-700">
+                                      {talla}
+                                    </span>
+                                  </td>
+                                  {colores.map(color => {
+                                    const key = `${talla}-${color}`;
+                                    const variante = variantesStock[key];
+
+                                    return (
+                                      <td key={color} className="px-4 py-3">
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={variante?.stock || 0}
+                                          onChange={(e) => {
+                                            const valor = parseInt(e.target.value) || 0;
+                                            actualizarStockVariante(talla, color, 'stock', valor);
+                                          }}
+                                          onFocus={(e) => e.target.select()}
+                                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-center text-lg font-semibold focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition hover:border-blue-400"
+                                          placeholder="0"
+                                        />
+                                      </td>
+                                    );
+                                  })}
+                                  <td className="px-4 py-3 text-center font-bold text-blue-600 bg-blue-50">
+                                    {totalTalla}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+
+                            {/* Fila de totales por color */}
+                            <tr className="bg-cyan-50 font-semibold">
+                              <td className="px-4 py-3 text-gray-900 sticky left-0 bg-cyan-100 z-10">
+                                Total
+                              </td>
+                              {colores.map(color => {
+                                const totalColor = tallas.reduce((sum, talla) => {
+                                  const key = `${talla}-${color}`;
+                                  return sum + (variantesStock[key]?.stock || 0);
+                                }, 0);
+
+                                return (
+                                  <td key={color} className="px-4 py-3 text-center text-cyan-700">
+                                    {totalColor}
+                                  </td>
+                                );
+                              })}
+                              <td className="px-4 py-3 text-center text-blue-700 bg-blue-100 text-lg font-bold">
+                                {calcularStockTotal()}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Información adicional */}
+                      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Info general */}
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-start gap-3">
+                            <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div className="text-sm text-blue-800">
+                              <p className="font-semibold mb-2">Cómo usar la matriz:</p>
+                              <ul className="list-disc list-inside space-y-1">
+                                <li>Escribe las cantidades directamente en cada celda</li>
+                                <li>Los totales se calculan automáticamente</li>
+                                <li>Click en el input para seleccionar todo el número</li>
+                                <li>Los SKUs se generan automáticamente al guardar</li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Estadísticas rápidas */}
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-start gap-3">
+                            <Package className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div className="text-sm text-blue-800">
+                              <p className="font-semibold mb-2">Resumen:</p>
+                              <ul className="space-y-1">
+                                <li><strong>{tallas.length}</strong> tallas disponibles</li>
+                                <li><strong>{colores.length}</strong> colores disponibles</li>
+                                <li><strong>{tallas.length * colores.length}</strong> combinaciones posibles</li>
+                                <li><strong>{Object.keys(variantesStock).length}</strong> variantes creadas</li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mensaje cuando no hay tallas o colores */}
+                  {(tallas.length === 0 || colores.length === 0) && (
+                    <div className="text-center py-8 px-4 border-2 border-dashed border-gray-300 rounded-lg">
+                      <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-600 font-medium">
+                        {tallas.length === 0 && colores.length === 0 && 'Agrega tallas y colores para comenzar'}
+                        {tallas.length === 0 && colores.length > 0 && 'Agrega al menos una talla para continuar'}
+                        {tallas.length > 0 && colores.length === 0 && 'Agrega al menos un color para continuar'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Modo sin variantes - Mensaje informativo */
+                <div className="text-center py-12 px-4">
+                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Tag className="w-10 h-10 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Producto sin variantes
+                  </h3>
+                  <p className="text-gray-600 max-w-md mx-auto">
+                    Este producto no tiene tallas ni colores. El stock se manejará de forma simple en el campo "Stock" de arriba.
+                  </p>
+                  <p className="text-sm text-gray-500 mt-3">
+                    Activa el switch de arriba si necesitas agregar variantes con stock individual.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Estados */}

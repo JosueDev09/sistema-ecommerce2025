@@ -327,7 +327,7 @@ export default function PedidosPage() {
                         </div>
                         <div>
                           <p className="text-gray-500">Método de Pago</p>
-                          <p className="font-semibold text-gray-900">{selectedOrder.tbPagos?.strMetodoPago || 'N/A'}</p>
+                          <p className="font-semibold text-gray-900">{selectedOrder.tbPagos?.strMetodoPago.toUpperCase() || 'N/A'}</p>
                         </div>
                       </div>
                     </div>
