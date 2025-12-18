@@ -1048,13 +1048,17 @@ export const resolvers = {
   let rol = empleado?.strRol || "";
   let usuario: any = empleado;
 
+  //console.log(empleado)
   // Si no existe en empleados, buscar en clientes
   if (!usuario) {
+    console.log('entro a LA VALIDACION',usuario)
     const cliente = await db.tbClientes.findUnique({ where: { strUsuario } });
     usuario = cliente;
     tipo = "Cliente";
     rol = "CLIENTE";
   }
+
+  console.log('Usuario encontrado:', usuario);
 
   if (!usuario) throw new Error("Usuario no encontrado");
 
