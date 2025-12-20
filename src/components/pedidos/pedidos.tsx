@@ -31,17 +31,66 @@ export default function PedidosPage() {
   const handleActualizarEstado = async () => {
     if (!selectedOrder || !nuevoEstado) return;
     
+    // 🔴 Si el estado es CANCELADO, mostrar confirmación especial
+    if (nuevoEstado === 'CANCELADO') {
+      const result = await Swal.fire({
+        title: '⚠️ ¿Cancelar Pedido?',
+        html: `
+          <div class="text-left space-y-3">
+            <p class="text-gray-700 font-semibold">Al cancelar este pedido se realizarán las siguientes acciones:</p>
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-3 rounded">
+              <p class="text-sm text-blue-800">📦 <strong>Devolución de Stock:</strong> Se regresarán todas las unidades al inventario</p>
+            </div>
+            <div class="bg-green-50 border-l-4 border-green-500 p-3 rounded">
+              <p class="text-sm text-green-800">💰 <strong>Reembolso:</strong> El pago será marcado como REEMBOLSADO</p>
+            </div>
+            <div class="bg-red-50 border-l-4 border-red-500 p-3 rounded">
+              <p class="text-sm text-red-800">🔒 <strong>Permanente:</strong> Esta acción no se puede deshacer</p>
+            </div>
+          </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Sí, cancelar pedido',
+        cancelButtonText: 'No, volver',
+        customClass: {
+          htmlContainer: 'text-left'
+        }
+      });
+
+      if (!result.isConfirmed) {
+        return; // Usuario canceló la operación
+      }
+    }
+    
     const success = await actualizarEstadoPedido(selectedOrder.intPedido, nuevoEstado as EstadoPedido,selectedOrder.strNumeroSeguimiento);
     
     if (success) {
       setShowEstadoModal(false);
       setNuevoEstado('');
-      // Mostrar mensaje de éxito (opcional)
-      Swal.fire({
-        icon: 'success',
-        title: 'Éxito',
-        text: 'El estado del pedido ha sido actualizado correctamente.',
-      });
+      
+      // Mensaje de éxito diferente para CANCELADO
+      if (nuevoEstado === 'CANCELADO') {
+        Swal.fire({
+          icon: 'success',
+          title: '✅ Pedido Cancelado',
+          html: `
+            <div class="space-y-2 text-left">
+              <p class="text-gray-700">El pedido ha sido cancelado exitosamente</p>
+              <p class="text-sm text-green-600">✓ Stock devuelto al inventario</p>
+              <p class="text-sm text-green-600">✓ Pago marcado como reembolsado</p>
+            </div>
+          `,
+        });
+      } else {
+        Swal.fire({
+          icon: 'success',
+          title: 'Éxito',
+          text: 'El estado del pedido ha sido actualizado correctamente.',
+        });
+      }
     } else {
       alert('Error al actualizar el estado');
     }
@@ -255,6 +304,36 @@ export default function PedidosPage() {
               </div>
 
               <div className="p-6 space-y-6">
+                {/* Badge de Cancelación (solo visible si está cancelado) */}
+                {selectedOrder.strEstado === 'CANCELADO' && (
+                  <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0">
+                        <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
+                          <XCircle className="w-6 h-6 text-white" />
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-bold text-red-900 mb-2">Pedido Cancelado</h4>
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2 text-sm">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-gray-700">
+                              <strong className="text-green-700">Stock devuelto:</strong> Todas las unidades fueron regresadas al inventario
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <span className="text-gray-700">
+                              <strong className="text-blue-700">Pago reembolsado:</strong> El monto de ${selectedOrder.dblTotal.toLocaleString()} fue reembolsado
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Estado */}
                 <div className="flex items-center gap-3">
                   {(() => {
@@ -445,56 +524,112 @@ export default function PedidosPage() {
                   Estado actual: <span className="font-semibold">{getStatusConfig(selectedOrder.strEstado).label}</span>
                 </p>
 
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nuevo Estado
-                </label>
-                <select
-                  value={nuevoEstado}
-                  onChange={(e) => setNuevoEstado(e.target.value as EstadoPedido)}
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                >
-                  <option value="">Seleccionar estado...</option>
-                  <option value="PENDIENTE">Pendiente</option>
-                  <option value="PROCESANDO">Procesando</option>
-                  <option value="EMPAQUETANDO">Empaquetando</option>
-                  <option value="ENVIADO">Enviado</option>
-                  <option value="ENTREGADO">Entregado</option>
-                  <option value="CANCELADO">Cancelado</option>
-                </select>
+                {/* Diseño especial para ENTREGADO */}
+                {selectedOrder.strEstado === 'ENTREGADO' ? (
+                  <div className="bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-300 rounded-xl p-6 text-center">
+                    <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <CheckCircle className="w-10 h-10 text-white" />
+                    </div>
+                    <h4 className="text-xl font-bold text-emerald-900 mb-2">
+                      ¡Pedido Entregado!
+                    </h4>
+                    <p className="text-sm text-emerald-700 mb-1">
+                      Este pedido ha sido completado exitosamente
+                    </p>
+                    <p className="text-xs text-emerald-600">
+                      El estado no puede ser modificado
+                    </p>
+                    <div className="mt-4 pt-4 border-t border-emerald-200">
+                      <p className="text-xs font-semibold text-emerald-800">
+                        Fecha de entrega: {formatFecha(selectedOrder.datPedido)}
+                      </p>
+                    </div>
+                  </div>
+                ) : selectedOrder.strEstado === 'CANCELADO' ? (
+                  /* Diseño especial para CANCELADO */
+                  <div className="bg-gradient-to-r from-red-50 to-rose-50 border-2 border-red-300 rounded-xl p-6 text-center">
+                    <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <XCircle className="w-10 h-10 text-white" />
+                    </div>
+                    <h4 className="text-xl font-bold text-red-900 mb-2">
+                      Pedido Cancelado
+                    </h4>
+                    <p className="text-sm text-red-700 mb-1">
+                      Este pedido ha sido cancelado
+                    </p>
+                    <p className="text-xs text-red-600">
+                      El estado no puede ser modificado
+                    </p>
+                    <div className="mt-4 pt-4 border-t border-red-200">
+                      <p className="text-xs font-semibold text-red-800">
+                        Fecha de cancelación: {formatFecha(selectedOrder.datPedido)}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  /* Select normal para otros estados */
+                  <>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nuevo Estado
+                    </label>
+                    <select
+                      value={nuevoEstado}
+                      onChange={(e) => setNuevoEstado(e.target.value as EstadoPedido)}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    >
+                      <option value="">Seleccionar estado...</option>
+                      <option value="PENDIENTE">Pendiente</option>
+                      <option value="PROCESANDO">Procesando</option>
+                      <option value="EMPAQUETANDO">Empaquetando</option>
+                      <option value="ENVIADO">Enviado</option>
+                      <option value="ENTREGADO">Entregado</option>
+                      <option value="CANCELADO">Cancelado</option>
+                    </select>
+                  </>
+                )}
               </div>
 
-              { nuevoEstado === 'ENVIADO' && (
-                <div className="mb-6 p-4 ">
+              {nuevoEstado === 'ENVIADO' && (
+                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <label className="block text-sm font-semibold text-yellow-900 mb-2">
+                    Número de Seguimiento
+                  </label>
                   <input
                     type="text"
                     value={strNumeroSeguimiento}
                     onChange={(e) => setStrNumeroSeguimiento(e.target.value)}
-                    placeholder="Número de seguimiento"
+                    placeholder="Ej: FEDEX123456789"
                     className="w-full px-4 py-2.5 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent outline-none"
                   />
+                  <p className="text-xs text-yellow-700 mt-2">
+                    Este número se enviará al cliente para rastrear su pedido
+                  </p>
                 </div>
               )}
-
-              
 
               <div className="flex gap-3">
                 <button
                   onClick={() => {
                     setShowEstadoModal(false);
                     setNuevoEstado('');
+                    setStrNumeroSeguimiento('');
                   }}
                   disabled={updatingStatus}
                   className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
-                  Cancelar
+                  {selectedOrder.strEstado === 'ENTREGADO' || selectedOrder.strEstado === 'CANCELADO' ? 'Cerrar' : 'Cancelar'}
                 </button>
-                <button
-                  onClick={handleActualizarEstado}
-                  disabled={!nuevoEstado || updatingStatus}
-                  className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {updatingStatus ? 'Actualizando...' : 'Confirmar'}
-                </button>
+                
+                {/* Solo mostrar botón Confirmar si NO es ENTREGADO ni CANCELADO */}
+                {selectedOrder.strEstado !== 'ENTREGADO' && selectedOrder.strEstado !== 'CANCELADO' && (
+                  <button
+                    onClick={handleActualizarEstado}
+                    disabled={!nuevoEstado || updatingStatus}
+                    className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {updatingStatus ? 'Actualizando...' : 'Confirmar'}
+                  </button>
+                )}
               </div>
             </div>
           </div>

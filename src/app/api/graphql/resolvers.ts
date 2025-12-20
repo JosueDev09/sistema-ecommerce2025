@@ -793,9 +793,18 @@ export const resolvers = {
 
     actualizarEstadoPedido: async (_: any, { intPedido, strEstado }: any) => {
       try {
-        // Verificar que el pedido existe
+        // Verificar que el pedido existe y obtener sus items
         const pedidoExistente = await db.tbPedidos.findUnique({
           where: { intPedido },
+          include: {
+            tbItems: {
+              include: {
+                tbProducto: true,
+                tbProductoVariante: true,
+              },
+            },
+            tbPagos: true,
+          },
         });
 
         if (!pedidoExistente) {
@@ -816,13 +825,76 @@ export const resolvers = {
           throw new Error(`Estado inválido. Debe ser uno de: ${estadosPermitidos.join(", ")}`);
         }
 
-        // Actualizar estado del pedido
-        const pedidoActualizado = await db.tbPedidos.update({
+        // 🔴 LÓGICA DE CANCELACIÓN: Reembolso y devolución de stock
+        if (strEstado === "CANCELADO") {
+          console.log(`🔄 Iniciando proceso de cancelación del pedido #${intPedido}...`);
+
+          // 1️⃣ DEVOLVER STOCK DE PRODUCTOS Y VARIANTES
+          await Promise.all(
+            pedidoExistente.tbItems.map(async (item: any) => {
+              if (item.intVariante) {
+                // Si el item tiene variante, devolver stock a la variante
+                await db.tbProductoVariantes.update({
+                  where: { intVariante: item.intVariante },
+                  data: {
+                    intStock: {
+                      increment: item.intCantidad,
+                    },
+                  },
+                });
+                console.log(`📦 Stock devuelto: +${item.intCantidad} unidades a variante #${item.intVariante}`);
+              } else {
+                // Si no tiene variante, devolver stock al producto base
+                await db.tbProductos.update({
+                  where: { intProducto: item.intProducto },
+                  data: {
+                    intStock: {
+                      increment: item.intCantidad,
+                    },
+                  },
+                });
+                console.log(`📦 Stock devuelto: +${item.intCantidad} unidades al producto #${item.intProducto}`);
+              }
+            })
+          );
+
+          // 2️⃣ ACTUALIZAR ESTADO DE PAGO A REEMBOLSADO
+          if (pedidoExistente.tbPagos) {
+            await db.tbPagos.update({
+              where: { intPago: pedidoExistente.tbPagos.intPago },
+              data: {
+                strEstado: "REEMBOLSADO",
+              },
+            });
+            console.log(`💰 Estado de pago actualizado a REEMBOLSADO`);
+          }
+
+          // 3️⃣ ACTUALIZAR ESTADO DEL PEDIDO
+          await db.tbPedidos.update({
+            where: { intPedido },
+            data: {
+              strEstado: "CANCELADO",
+              strEstadoPago: "REEMBOLSADO",
+              datActualizacion: new Date(),
+            },
+          });
+
+          console.log(`✅ Pedido #${intPedido} CANCELADO - Stock devuelto y pago reembolsado`);
+        } else {
+          // Para otros estados, solo actualizar normalmente
+          await db.tbPedidos.update({
+            where: { intPedido },
+            data: {
+              strEstado,
+              datActualizacion: new Date(),
+            },
+          });
+          console.log(`✅ Pedido #${intPedido} actualizado a estado: ${strEstado}`);
+        }
+
+        // Obtener el pedido actualizado con todas las relaciones
+        const pedidoActualizado = await db.tbPedidos.findUnique({
           where: { intPedido },
-          data: {
-            strEstado,
-            datActualizacion: new Date(),
-          },
           include: {
             tbClientes: true,
             tbDirecciones: true,
@@ -834,8 +906,6 @@ export const resolvers = {
             tbPagos: true,
           },
         });
-
-        console.log(`✅ Pedido #${intPedido} actualizado a estado: ${strEstado}`);
         
         // 📧 Enviar email de actualización al cliente
         try {
