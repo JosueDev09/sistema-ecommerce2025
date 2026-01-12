@@ -376,6 +376,7 @@ export const resolvers = {
     },
 
     eliminarCategoria: async (_: any, { intCategoria }: any) => {
+      console.log('Eliminando categoría con ID:', intCategoria);
       await db.tbCategorias.delete({ where: { intCategoria } });
       return true;
     },
@@ -424,7 +425,7 @@ export const resolvers = {
           intCategoria: parseInt(cleanData.intCategoria),
         };
         
-        console.log('✅ Datos preparados para crear:', JSON.stringify(productData, null, 2));
+     //   console.log('✅ Datos preparados para crear:', JSON.stringify(productData, null, 2));
         
         // Si hay variantes, crear producto con variantes en una transacción
         if (cleanData.variantes && Array.isArray(cleanData.variantes) && cleanData.variantes.length > 0) {

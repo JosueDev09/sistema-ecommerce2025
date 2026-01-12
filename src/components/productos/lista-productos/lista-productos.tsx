@@ -191,7 +191,7 @@ export default function ListaProductos() {
   };
 
   const getStockConfig = (stock: number) => {
-    if (stock > 10)
+    if (stock >= 10)
       return { label: "Disponible", color: "text-emerald-700", bg: "bg-emerald-100", icon: CheckCircle };
     if (stock > 0)
       return { label: "Stock Bajo", color: "text-orange-700", bg: "bg-orange-100", icon: AlertCircle };
