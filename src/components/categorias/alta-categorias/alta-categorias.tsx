@@ -367,18 +367,19 @@ export default function AltaCategorias() {
               ) : (
                 <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                   <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                  <span className="text-sm font-medium text-gray-600">
-                    Subir imagen
-                  </span>
-                  <span className="text-xs text-gray-500 mt-1">
-                    PNG, JPG hasta 5MB
-                  </span>
                   <input
                     type="file"
                     accept="image/*"
                     onChange={handleImageUpload}
                     className="hidden"
                   />
+                  <span className="text-sm font-medium text-gray-600">
+                    Subir imagen
+                  </span>
+                  <span className="text-xs text-gray-500 mt-1">
+                    PNG, JPG hasta 5MB
+                  </span>
+                  
                 </label>
               )}
             </div>

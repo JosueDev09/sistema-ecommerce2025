@@ -27,6 +27,7 @@ model tbClientes {
   tbDirecciones tbDirecciones[]
   tbPedidos     tbPedidos[]
   tbTarjetas    tbTarjetas[] // ✨ NUEVO
+  tbProducto_Reviews tbProducto_Reviews[] // ✨ NUEVO
 }
 
 model tbEmpleados {
@@ -120,6 +121,7 @@ model tbProductos {
 
   tbItemsPedido       tbPedidosItems[]
   tbProductoVariantes tbProductoVariantes[] // ✨ NUEVO: Relación con variantes
+  tbProducto_Reviews  tbProducto_Reviews[]  // ✨ NUEVO: Relación con reviews
 }
 
 // ======================================================
@@ -293,5 +295,27 @@ model tbTarjetas {
 
   tbCliente tbClientes @relation(fields: [intCliente], references: [intCliente])
 
+  @@index([intCliente])
+}
+
+model tbSugerencias_Marcas {
+  intSugerenciaMarca Int      @id @default(autoincrement())
+  strMarca          String
+  intVotos         Int      @default(0)
+  datCreacion       DateTime @default(now())
+}
+
+model tbProducto_Reviews {
+  intReview       Int      @id @default(autoincrement())
+  intProducto     Int
+  intCliente      Int
+  intCalificacion Int      // 1 a 5
+  strComentario   String?
+  datCreacion     DateTime @default(now())
+
+  tbProducto tbProductos @relation(fields: [intProducto], references: [intProducto])
+  tbCliente  tbClientes  @relation(fields: [intCliente], references: [intCliente])
+
+  @@index([intProducto])
   @@index([intCliente])
 }

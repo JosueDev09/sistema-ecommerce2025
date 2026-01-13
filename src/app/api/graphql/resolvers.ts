@@ -134,10 +134,12 @@ export const resolvers = {
             include: {
               tbCategoria: true,
               tbCreadoPor: true,
+              tbProducto_Reviews: true,
               tbProductoVariantes: {
-            where: {
-              bolActivo: true,
-            },
+              where: {
+                bolActivo: true,
+              },
+             
             orderBy: [
               { strTalla: 'asc' },
               { strColor: 'asc' }
@@ -158,6 +160,7 @@ export const resolvers = {
             where: {
               bolActivo: true,
             },
+            
             orderBy: [
               { strTalla: 'asc' },
               { strColor: 'asc' }
@@ -358,6 +361,15 @@ export const resolvers = {
           throw new Error("Error al cargar las tarjetas del cliente");
         }
 },
+
+    obtenerReviewsProducto: async (_: any, { intProducto }: any) => {
+
+      console.log('🔍 Obteniendo reviews del producto:', intProducto);
+      return await db.tbProducto_Reviews.findMany({
+        where: { intProducto },
+        orderBy: { datCreacion: 'desc' } // Las más recientes primero
+      });
+    },
 
   },
   Mutation: {
@@ -1107,7 +1119,79 @@ export const resolvers = {
           }
         },
 
-      
+        // SUGERENCIAS DE MARCA
+        crearSugerenciaMarca: async (_: any, { data }: any) => {
+          try {
+            // Verificar si la sugerencia ya existe (insensible a mayúsculas)
+            const sugerenciaExistente = await db.tbSugerencias_Marcas.findFirst({
+              where: {
+                strMarca: {
+                  equals: data.strMarca,
+                  mode: "insensitive",
+                },
+              },
+            });
+
+            if(!sugerenciaExistente){
+              const nuevaSugerencia = await db.tbSugerencias_Marcas.create({
+              data: {
+                strMarca: data.strMarca,
+                intVotos: 1,
+              },
+            });
+            return nuevaSugerencia;
+            } else {
+              await db.tbSugerencias_Marcas.update({
+                where: { intSugerenciaMarca: sugerenciaExistente.intSugerenciaMarca },
+                data: {
+                  intVotos: {
+                    increment: 1,
+                  },
+                },
+              });
+              return sugerenciaExistente;
+            }
+           
+          } catch (error) {
+            console.error("Error al crear sugerencia de marca:", error);
+            throw new Error("No se pudo crear la sugerencia de marca");
+          }
+        },
+
+    // Reviews de productos
+    crearReviewProducto: async (_: any, { data }: any) => {
+      try { 
+        // Verificar que el cliente y producto existen
+        // const cliente = await db.tbClientes.findUnique({
+        //   where: { intCliente: data.intCliente },
+        // });
+        // if (!cliente) {
+        //   throw new Error("Cliente no encontrado");
+        // } 
+        const producto = await db.tbProductos.findUnique({
+          where: { intProducto: data.intProducto },
+        });
+        if (!producto) {
+          throw new Error("Producto no encontrado");
+        }
+        // Crear la review
+
+        console.log("Creando review para producto:", data.intProducto, "datos",data);
+        const nuevaReview = await db.tbProducto_Reviews.create({
+          data: {
+            intProducto: data.intProducto,
+            intCliente: data.intCliente,
+            intCalificacion: data.intCalificacion,
+            strComentario: data.strComentario || null,
+          },
+        });
+        return nuevaReview;
+      } catch (error) {
+        console.error("Error al crear review de producto:", error);
+        throw new Error("No se pudo crear la review del producto");
+      }   
+    },
+    
 
 
    login: async (_: any, { data }: any) => {

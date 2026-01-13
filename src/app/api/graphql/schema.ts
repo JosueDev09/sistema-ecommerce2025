@@ -132,6 +132,7 @@ export const typeDefs = gql`
     tbCategoria: Categoria!
     tbCreadoPor: Empleado
     tbProductoVariantes: [ProductoVariante!]
+    tbProducto_Reviews: [ProductoReview!]
   }
 
   type ProductoVariante {
@@ -146,6 +147,15 @@ export const typeDefs = gql`
     bolActivo: Boolean!
     datCreacion: String!
     datActualizacion: String!
+  }
+
+  type ProductoReview {
+    intReview: Int!
+    intProducto: Int!
+    intCliente: Int!
+    intCalificacion: Int!
+    strComentario: String
+    datCreacion: String!
   }
 
   type PedidoItem {
@@ -244,6 +254,21 @@ export const typeDefs = gql`
     tbPedido: Pedido!
   }
 
+  type SugerenciasMarca {
+    intSugerenciaMarca: Int!
+    strMarca: String!
+    intVotos: Int!
+    datCreacion: String!
+  }
+
+  type ProductoReview {
+    intReview: Int!
+    intProducto: Int!
+    intCliente: Int!
+    intCalificacion: Int!
+    strComentario: String
+    datCreacion: String!
+  }
 
   # ======================================================
   #  INPUTS (para Mutations)
@@ -516,6 +541,17 @@ export const typeDefs = gql`
     strPais: String
   }
 
+  input SugerenciaMarcaInput {
+    strMarca: String!
+  }
+
+  input ProductoReviewInput {
+    intProducto: Int!
+    strComentario: String!
+    intCalificacion: Int!
+    intCliente: Int!
+  }
+
 
   # ======================================================
   #  QUERIES
@@ -567,6 +603,12 @@ export const typeDefs = gql`
     # Mercado Pago
     obtenerEstadoPago(strPreferenciaId: String!): PagoEstado!
 
+    # Sugerencias de Marcas
+    obtenerSugerenciasMarcas: [SugerenciasMarca!]!
+
+    # Reviews de Productos
+    obtenerReviewsProducto(intProducto: Int!): [ProductoReview!]!
+
   }
 
   # ======================================================
@@ -616,5 +658,11 @@ export const typeDefs = gql`
     # Mercado Pago
     crearPreferenciaMercadoPago(data: PreferenciaMercadoPagoInput!): PagoMercadoPago!
     actualizarEstadoPago(strMercadoPagoId: String! strEstado: String! jsonRespuesta: String!): Pago!
+
+    # Sugerencias de Marcas
+    crearSugerenciaMarca(data: SugerenciaMarcaInput!): SugerenciasMarca!
+
+    # Reviews de Productos
+    crearReviewProducto(data: ProductoReviewInput!): ProductoReview!
   }
 `;
