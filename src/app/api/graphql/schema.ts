@@ -270,6 +270,12 @@ export const typeDefs = gql`
     datCreacion: String!
   }
 
+  type MotivoMovimiento {
+    intMotivoMovimiento: Int!
+    strTipoMovimiento: String!
+    strDescripcion: String!
+  }
+
   # ======================================================
   #  INPUTS (para Mutations)
   # ======================================================
@@ -608,6 +614,9 @@ export const typeDefs = gql`
 
     # Reviews de Productos
     obtenerReviewsProducto(intProducto: Int!): [ProductoReview!]!
+
+    # Motivos de Movimiento
+    obtenerMotivosMovimiento(strTipoMovimiento: String!): [MotivoMovimiento!]!
 
   }
 

@@ -62,6 +62,11 @@ function obtenerMensajeRechazo(statusDetail: string): string {
 export const resolvers = {
 
   
+  
+  // ======================================================
+  //  QUERIES
+  // ======================================================
+
   Query: {
     obtenerProductos: async () => {
       return await db.tbProductos.findMany({
@@ -364,14 +369,29 @@ export const resolvers = {
 
     obtenerReviewsProducto: async (_: any, { intProducto }: any) => {
 
-      console.log('🔍 Obteniendo reviews del producto:', intProducto);
+    //  console.log('🔍 Obteniendo reviews del producto:', intProducto);
       return await db.tbProducto_Reviews.findMany({
         where: { intProducto },
         orderBy: { datCreacion: 'desc' } // Las más recientes primero
       });
     },
 
+    // ======================================================
+    //  INVENTARIO
+    // ======================================================
+
+    obtenerMotivosMovimiento: async (_: any, {strTipoMovimiento}: any) => {
+      console.log('🔍 Obteniendo motivos de movimiento para tipo:', strTipoMovimiento);
+      return await db.tbMotivo_Movimientos.findMany({
+        where: { strTipoMovimiento }
+      });
+    }
+
   },
+
+  // ============================================================
+  // MUTATIONS
+  // ============================================================
   Mutation: {
     crearCategoria: async (_: any, { data }: any) => {
      // console.log('Datos recibidos para crear categoría:', data);
@@ -758,6 +778,7 @@ export const resolvers = {
           });
 
           // 3. Crear items del pedido
+         // console.log("🛒 Creando items para el pedido:", data);
           for (const item of data.items) {
             await prisma.tbPedidosItems.create({
               data: {
@@ -804,9 +825,10 @@ export const resolvers = {
       }
     },
 
-    actualizarEstadoPedido: async (_: any, { intPedido, strEstado }: any) => {
+    actualizarEstadoPedido: async (_: any, { intPedido, strEstado, strNumeroSeguimiento }: any) => {
       try {
         // Verificar que el pedido existe y obtener sus items
+    //    console.log(`🔄 Actualizando estado del pedido #${intPedido} a ${strEstado} con número de seguimiento: ${strNumeroSeguimiento || 'N/A'}`);
         const pedidoExistente = await db.tbPedidos.findUnique({
           where: { intPedido },
           include: {
@@ -900,6 +922,7 @@ export const resolvers = {
             data: {
               strEstado,
               datActualizacion: new Date(),
+              strNumeroSeguimiento: strNumeroSeguimiento || null,
             },
           });
           console.log(`✅ Pedido #${intPedido} actualizado a estado: ${strEstado}`);
@@ -1176,7 +1199,7 @@ export const resolvers = {
         }
         // Crear la review
 
-        console.log("Creando review para producto:", data.intProducto, "datos",data);
+      //  console.log("Creando review para producto:", data.intProducto, "datos",data);
         const nuevaReview = await db.tbProducto_Reviews.create({
           data: {
             intProducto: data.intProducto,
@@ -1192,6 +1215,11 @@ export const resolvers = {
       }   
     },
     
+
+    // ======================================================
+    //  LOGIN (Empleado o Cliente)
+    // ======================================================
+
 
 
    login: async (_: any, { data }: any) => {
@@ -1213,7 +1241,7 @@ export const resolvers = {
     rol = "CLIENTE";
   }
 
-  console.log('Usuario encontrado:', usuario);
+  //console.log('Usuario encontrado:', usuario);
 
   if (!usuario) throw new Error("Usuario no encontrado");
 
@@ -1243,7 +1271,7 @@ export const resolvers = {
     // ======================================================
     crearPreferenciaMercadoPago: async (_: any, { data }: any) => {
       try {
-        console.log("🔵 Procesando pago con MercadoPago...");
+      //  console.log("🔵 Procesando pago con MercadoPago...");
 
         // Validar que el pedido existe
         const pedido = await db.tbPedidos.findUnique({
@@ -1343,7 +1371,7 @@ export const resolvers = {
             return mapa[tipoTarjeta?.toLowerCase()] || 'visa';
           };
 
-          console.log('Data para pago directo:',data.payer);
+         // console.log('Data para pago directo:',data.payer);
 
           // Crear pago directo con el token
          const paymentData: any = {
@@ -1379,7 +1407,7 @@ export const resolvers = {
 
 
           // Procesar el pago
-          console.log("💳 Procesando pago directo con datos:", paymentData);
+         // console.log("💳 Procesando pago directo con datos:", paymentData);
           const pagoResponse = await paymentClient.create({ body: paymentData });
 
           // console.log("✅ Pago directo procesado:", pagoResponse.id);

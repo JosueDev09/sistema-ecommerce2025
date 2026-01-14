@@ -65,7 +65,8 @@ export default function PedidosPage() {
       }
     }
     
-    const success = await actualizarEstadoPedido(selectedOrder.intPedido, nuevoEstado as EstadoPedido,selectedOrder.strNumeroSeguimiento);
+    console.log('Seguimiento del pedido:', strNumeroSeguimiento);
+    const success = await actualizarEstadoPedido(selectedOrder.intPedido, nuevoEstado as EstadoPedido, strNumeroSeguimiento);
     
     if (success) {
       setShowEstadoModal(false);
@@ -492,6 +493,7 @@ export default function PedidosPage() {
 
                 {/* Acciones */}
                 <div className="flex gap-3 pt-4">
+                {selectedOrder.strEstado !== 'ENTREGADO' && selectedOrder.strEstado !== 'CANCELADO' && (
                   <button 
                     onClick={() => setShowEstadoModal(true)}
                     disabled={updatingStatus}
@@ -499,6 +501,8 @@ export default function PedidosPage() {
                   >
                     {updatingStatus ? 'Actualizando...' : 'Actualizar Estado Del Pedido'}
                   </button>
+                ) }
+
                   <button className="px-4 py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
                     Imprimir
                   </button>

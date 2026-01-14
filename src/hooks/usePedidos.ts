@@ -218,7 +218,7 @@ export function usePedidos(): UsePedidosReturn {
   const actualizarEstadoPedido = async (intPedido: number, nuevoEstado: EstadoPedido, strNumeroSeguimiento?: string): Promise<boolean> => {
     try {
       setUpdatingStatus(true);
-      
+      console.log('Actualizando estado del pedido:', intPedido, 'a', nuevoEstado, 'con seguimiento:', strNumeroSeguimiento);
       const MUTATION_ACTUALIZAR_ESTADO = `
         mutation ActualizarEstadoPedido($intPedido: Int!, $strEstado: EstadoPedido!, $strNumeroSeguimiento: String) {
           actualizarEstadoPedido(intPedido: $intPedido, strEstado: $strEstado, strNumeroSeguimiento: $strNumeroSeguimiento) {
@@ -240,6 +240,7 @@ export function usePedidos(): UsePedidosReturn {
           variables: {
             intPedido,
             strEstado: nuevoEstado,
+            strNumeroSeguimiento: strNumeroSeguimiento || null,
           },
         }),
       });

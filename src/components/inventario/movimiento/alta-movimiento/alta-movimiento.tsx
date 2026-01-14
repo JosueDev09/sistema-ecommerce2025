@@ -35,9 +35,11 @@ interface FormData {
   intProducto: number;
   strProductoNombre: string;
   intCantidad: number;
-  strMotivo: string;
+  intMotivoMovimiento: number;
   strReferencia: string;
   strObservaciones: string;
+  dblCostoUnitario: number;
+  dblCostoTotal: number;
   datFecha: string;
 }
 
@@ -50,6 +52,7 @@ export default function AltaMovimiento() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [motivos, setMotivos] = useState<{ intMotivoMovimiento: number; strDescripcion: string }[]>([]);
 
   // Estados para carga de archivos
   const [archivos, setArchivos] = useState<File[]>([]);
@@ -65,7 +68,9 @@ export default function AltaMovimiento() {
     intProducto: 0,
     strProductoNombre: "",
     intCantidad: 0,
-    strMotivo: "",
+    dblCostoUnitario: 0,
+    dblCostoTotal: 0,
+    intMotivoMovimiento: 0,
     strReferencia: "",
     strObservaciones: "",
     datFecha: new Date().toISOString().split('T')[0],
@@ -175,7 +180,7 @@ export default function AltaMovimiento() {
       return;
     }
 
-    if (!formData.strMotivo) {
+    if (!formData.intMotivoMovimiento) {
       setError("Debes especificar el motivo del movimiento");
       return;
     }
@@ -208,9 +213,11 @@ export default function AltaMovimiento() {
         intProducto: 0,
         strProductoNombre: "",
         intCantidad: 0,
-        strMotivo: "",
+        intMotivoMovimiento: 0,
         strReferencia: "",
         strObservaciones: "",
+        dblCostoUnitario: 0,
+        dblCostoTotal: 0,
         datFecha: new Date().toISOString().split('T')[0],
       });
       setBusqueda("");
@@ -292,26 +299,65 @@ export default function AltaMovimiento() {
     link.click();
   };
 
-  const motivos = {
-    ENTRADA: [
-      "Compra a proveedor",
-      "Devolución de cliente",
-      "Ajuste de inventario",
-      "Producción interna",
-      "Transferencia entre almacenes",
-      "Otro",
-    ],
-    SALIDA: [
-      "Venta",
-      "Devolución a proveedor",
-      "Producto dañado",
-      "Producto vencido",
-      "Merma",
-      "Transferencia entre almacenes",
-      "Muestra o regalo",
-      "Otro",
-    ],
+  // const motivos = {
+  //   ENTRADA: [
+  //     "Compra a proveedor",
+  //     "Devolución de cliente",
+  //     "Ajuste de inventario",
+  //     "Producción interna",
+  //     "Transferencia entre almacenes",
+  //     "Otro",
+  //   ],
+  //   SALIDA: [
+  //     "Venta",
+  //     "Devolución a proveedor",
+  //     "Producto dañado",
+  //     "Producto vencido",
+  //     "Merma",
+  //     "Transferencia entre almacenes",
+  //     "Muestra o regalo",
+  //     "Otro",
+  //   ],
+  // };
+  const fetchMotivosMovimiento = async (tipoMovimiento: any) => {
+    
+    try {
+      const query = ` 
+        query obtenerMotivosMovimiento($strTipoMovimiento: String!) {
+          obtenerMotivosMovimiento(strTipoMovimiento: $strTipoMovimiento) {
+            intMotivoMovimiento
+            strDescripcion
+          }
+        }
+      `;
+
+      const variables = { strTipoMovimiento: tipoMovimiento };
+      console.log("Fetching motivos for tipoMovimiento:", variables);
+      const response = await fetch("/api/graphql", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, variables }),
+      });
+
+      const result = await response.json();
+      if (result.data && result.data.obtenerMotivosMovimiento) {
+        setMotivos(result.data.obtenerMotivosMovimiento);
+      } else {
+        setError("No se pudieron obtener los motivos de movimiento");
+      }
+    } catch (error) {
+      setError("Error al obtener motivos de movimiento");
+      console.error(error);
+    }
   };
+
+  useEffect(() => {
+    // Fetch motivos de movimiento based on tipoMovimiento
+    console.log("Tipo de movimiento cambiado:", formData.tipoMovimiento);
+    if (formData.tipoMovimiento) {
+      fetchMotivosMovimiento(formData.tipoMovimiento);
+    }
+  }, [formData.tipoMovimiento]);
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -393,7 +439,7 @@ export default function AltaMovimiento() {
               <button
                 type="button"
                 onClick={() =>
-                  setFormData({ ...formData, tipoMovimiento: "ENTRADA", strMotivo: "" })
+                  setFormData({ ...formData, tipoMovimiento: "ENTRADA", intMotivoMovimiento: 0 })
                 }
                 className={`p-4 border-2 rounded-lg transition-all ${formData.tipoMovimiento === "ENTRADA"
                     ? "border-green-500 bg-green-50 shadow-md"
@@ -420,7 +466,7 @@ export default function AltaMovimiento() {
               <button
                 type="button"
                 onClick={() =>
-                  setFormData({ ...formData, tipoMovimiento: "SALIDA", strMotivo: "" })
+                  setFormData({ ...formData, tipoMovimiento: "SALIDA", intMotivoMovimiento: 0 })
                 }
                 className={`p-4 border-2 rounded-lg transition-all ${formData.tipoMovimiento === "SALIDA"
                     ? "border-red-500 bg-red-50 shadow-md"
@@ -585,6 +631,41 @@ export default function AltaMovimiento() {
             )}
           </div>
 
+            {/* Precio Unitario */}
+
+         <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Costo Unitario del Producto
+              <span className="text-gray-500 text-xs ml-2">(MXN)</span>
+            </label>
+            
+            <input
+              type="text"
+              value={formData.dblCostoUnitario}
+              onChange={(e) => setFormData({ ...formData, dblCostoUnitario: parseFloat(e.target.value) })}
+              placeholder="Ej: 1500.00"
+              className="w-[200px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+           
+          </div>
+
+            {/* Precio Precio Total */}
+
+             <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+             Costo Total de la Operación
+              <span className="text-gray-500 text-xs ml-2">(MXN)</span>
+            </label>
+            <input
+              type="text"
+              value={formData.dblCostoTotal}
+              onChange={(e) => setFormData({ ...formData, dblCostoTotal: parseFloat(e.target.value) })}
+              placeholder="Ej: 1500.00"
+              className="w-[200px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            
+          </div>
+
           {/* Motivo */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -592,16 +673,16 @@ export default function AltaMovimiento() {
               Motivo del Movimiento *
             </label>
             <select
-              value={formData.strMotivo}
-              onChange={(e) => setFormData({ ...formData, strMotivo: e.target.value })}
+              value={formData.intMotivoMovimiento}
+              onChange={(e) => setFormData({ ...formData, intMotivoMovimiento: parseInt(e.target.value) })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             >
               <option value="">Selecciona un motivo...</option>
               {formData.tipoMovimiento &&
-                motivos[formData.tipoMovimiento].map((motivo) => (
-                  <option key={motivo} value={motivo}>
-                    {motivo}
+                motivos.map((motivo) => (
+                  <option key={motivo.intMotivoMovimiento} value={motivo.intMotivoMovimiento}>
+                    {motivo.strDescripcion}
                   </option>
                 ))}
             </select>
@@ -609,7 +690,7 @@ export default function AltaMovimiento() {
 
           {/* Proveedor */}
           <div>
-            {formData.strMotivo === "Compra a proveedor" && (
+            {formData.intMotivoMovimiento === 1 && (
               <>              
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   <FileText className="inline h-4 w-4 mr-1" />
@@ -623,9 +704,9 @@ export default function AltaMovimiento() {
                 >
                   <option value="">Selecciona el proveedor...</option>
                   {formData.tipoMovimiento &&
-                    motivos[formData.tipoMovimiento].map((motivo) => (
-                      <option key={motivo} value={motivo}>
-                        {motivo}
+                    motivos.map((motivo) => (
+                      <option key={motivo.intMotivoMovimiento} value={motivo.intMotivoMovimiento}>
+                        {motivo.strDescripcion}
                       </option>
                     ))}
                 </select>
@@ -700,9 +781,11 @@ export default function AltaMovimiento() {
                   intProducto: 0,
                   strProductoNombre: "",
                   intCantidad: 0,
-                  strMotivo: "",
+                  intMotivoMovimiento: 0,
                   strReferencia: "",
                   strObservaciones: "",
+                  dblCostoUnitario: 0,
+                  dblCostoTotal: 0,
                   datFecha: new Date().toISOString().split('T')[0],
                 });
                 setBusqueda("");

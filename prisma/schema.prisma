@@ -122,6 +122,7 @@ model tbProductos {
   tbItemsPedido       tbPedidosItems[]
   tbProductoVariantes tbProductoVariantes[] // ✨ NUEVO: Relación con variantes
   tbProducto_Reviews  tbProducto_Reviews[]  // ✨ NUEVO: Relación con reviews
+  tbMovimientosInventarios tbMovimientosInventarios[]
 }
 
 // ======================================================
@@ -318,4 +319,32 @@ model tbProducto_Reviews {
 
   @@index([intProducto])
   @@index([intCliente])
+}
+
+model tbMovimientosInventarios {
+  intMovimiento       Int      @id @default(autoincrement())
+  intProducto         Int
+  strTipoMovimiento   String   // "ENTRADA" o "SALIDA"
+  intCantidad         Int
+  dblCostoUnitario    Float
+  dblCostoTotal       Float
+  intMotivoMovimiento Int?
+  strReferencia       String?  // Referencia externa (ej: número de orden de compra)
+  datCreacion         DateTime @default(now())
+  intEmpleado         Int?
+
+  tbProducto          tbProductos @relation(fields: [intProducto], references: [intProducto])
+  tbMotivo_Movimientos tbMotivo_Movimientos? @relation(fields: [intMotivoMovimiento], references: [intMotivoMovimiento])
+  
+  @@index([intProducto])
+  @@index([intMotivoMovimiento])
+}
+
+model tbMotivo_Movimientos {
+  intMotivoMovimiento Int      @id @default(autoincrement())
+  strTipoMovimiento   String
+  strDescripcion      String
+  datCreacion         DateTime @default(now())
+  
+  tbMovimientosInventarios tbMovimientosInventarios[]
 }
